@@ -7,15 +7,8 @@ screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Starlight Frontier")
 clock = pygame.time.Clock()
 
-ship_stats = {
-    'x': 400,
-    'y': 300,
-    'angle': 0,
-    'speed': 0,
-    'max_speed': 10,
-}
 
-player = entities.Ship.create(**ship_stats)
+player = entities.Ship.create()
 
 star_surface = pygame.Surface((800, 600))
 star_surface.fill((0, 0, 0))
@@ -34,10 +27,16 @@ while running:
         player.accelerate('forward')
     if keys[pygame.K_s]:
         player.accelerate('backward')
+    if keys[pygame.K_q]:
+        player.accelerate_lateral('left')
+    if keys[pygame.K_e]:
+        player.accelerate_lateral('right')
     if keys[pygame.K_a]:
         player.turn('left')
     if keys[pygame.K_d]:
         player.turn('right')
+    if keys[pygame.K_x]:
+        player.brake()
 
     player.move()
 

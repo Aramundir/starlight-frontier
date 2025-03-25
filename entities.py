@@ -3,17 +3,20 @@ import pygame
 
 
 class Ship(object):
-    def __init__(self, x, y, angle, speed, max_speed):
-        self.x = x
-        self.y = y
-        self.angle = angle
-        self.speed = speed
-        self.max_speed = max_speed
+    def __init__(self):
+        self.x = 400
+        self.y = 300
+        self.angle = 0
+        self.x_vector = 0
+        self.y_vector = 0
+        self.max_speed = 1000
         self.points = self.get_points()
+        self.forward_thrust = 0.2
+        self.side_thrust = 0.2
 
     @classmethod
-    def create(cls, x, y, angle, speed, max_speed):
-        return cls(x, y, angle, speed, max_speed)
+    def create(cls):
+        return cls()
 
     def get_points(self):
         return [
@@ -23,10 +26,49 @@ class Ship(object):
         ]
 
     def accelerate(self, direction):
+        ax = math.cos(math.radians(self.angle)) * self.forward_thrust
+        ay = -math.sin(math.radians(self.angle)) * self.forward_thrust
+
         if direction == 'forward':
-            self.speed = min(self.speed + 0.1, self.max_speed)
+            self.x_vector += ax
+            self.y_vector += ay
         if direction == 'backward':
-            self.speed = max(self.speed - 0.1, (self.max_speed * -1))
+            self.x_vector -= ax
+            self.y_vector -= ay
+
+        speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
+        if speed > self.max_speed:
+            scale = self.max_speed / speed
+            self.x_vector *= scale
+            self.y_vector *= scale
+
+    def accelerate_lateral(self, direction):
+        ax = -math.sin(math.radians(self.angle)) * self.side_thrust
+        ay = -math.cos(math.radians(self.angle)) * self.side_thrust
+
+        if direction == 'left':
+            self.x_vector += ax
+            self.y_vector += ay
+        if direction == 'right':
+            self.x_vector -= ax
+            self.y_vector -= ay
+
+        speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
+        if speed > self.max_speed:
+            scale = self.max_speed / speed
+            self.x_vector *= scale
+            self.y_vector *= scale
+
+    def brake(self):
+        speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
+        if speed > 0:
+            reduction_factor = self.forward_thrust / speed
+            self.x_vector -= self.x_vector * reduction_factor
+            self.y_vector -= self.y_vector * reduction_factor
+
+            if speed < self.forward_thrust:
+                self.x_vector = 0
+                self.y_vector = 0
 
     def turn(self, direction):
         if direction == 'left':
@@ -35,8 +77,8 @@ class Ship(object):
             self.angle -= 5
 
     def move(self):
-        self.x += math.cos(math.radians(self.angle)) * self.speed
-        self.y -= math.sin(math.radians(self.angle)) * self.speed
+        self.x += self.x_vector
+        self.y += self.y_vector
 
         self.x = self.x % 800
         self.y = self.y % 600
