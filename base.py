@@ -8,11 +8,18 @@ pygame.display.set_caption("Starlight Frontier")
 clock = pygame.time.Clock()
 
 
-player = entities.Ship.create()
+player = entities.Ship.create(400, 300, 5, 'player')
+enemies = []
+
+for number in range(5):
+    x = random.randint(0, 750)
+    y = random.randint(0, 550)
+    enemy = entities.Ship.create(x, y, 3, 'enemy')
+    enemies.append(enemy)
 
 star_surface = pygame.Surface((800, 600))
 star_surface.fill((0, 0, 0))
-for _ in range(100):
+for star in range(100):
     pygame.draw.circle(star_surface, (255, 255, 255),
                       (random.randint(0, 800), random.randint(0, 600)), 1)
 
@@ -44,6 +51,11 @@ while running:
     screen.blit(star_surface, (0, 0))
 
     player.render(screen)
+
+    for enemy in enemies:
+        enemy.approach_target(player.x, player.y)
+        enemy.move()
+        enemy.render(screen)
 
     pygame.display.flip()
     clock.tick(60)
