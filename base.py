@@ -1,15 +1,15 @@
 import pygame
 import random
-import entities
+import entities, game_physics
 
 pygame.init()
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Starlight Frontier")
 clock = pygame.time.Clock()
 
-all_sprites = pygame.sprite.Group()
+all_ships = pygame.sprite.Group()
 player = entities.Ship.create(400, 300, 5, 'player')
-all_sprites.add(player)
+all_ships.add(player)
 
 enemies = []
 
@@ -17,7 +17,7 @@ for number in range(5):
     x = random.randint(0, 750)
     y = random.randint(0, 550)
     enemy = entities.Ship.create(x, y, 3, 'enemy')
-    all_sprites.add(enemy)
+    all_ships.add(enemy)
     enemies.append(enemy)
 
 star_surface = pygame.Surface((800, 600))
@@ -48,11 +48,13 @@ while running:
     if keys[pygame.K_x]:
         player.brake()
 
-    all_sprites.update()
+    all_ships.update()
+
+    game_physics.check_for_ship_collision(all_ships)
 
     screen.blit(star_surface, (0, 0))
 
-    all_sprites.draw(screen)
+    all_ships.draw(screen)
 
 
     for enemy in enemies:

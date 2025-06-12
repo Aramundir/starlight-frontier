@@ -21,8 +21,6 @@ class Ship(pygame.sprite.Sprite):
         self.mask= None
         self.get_image()
 
-
-
     @classmethod
     def create(cls, x, y, turn_rate, faction):
         return cls(x, y, turn_rate, faction)
@@ -104,7 +102,6 @@ class Ship(pygame.sprite.Sprite):
         self.y += self.y_vector
         self.x = self.x % 800
         self.y = self.y % 600
-        # self.rect.center = (self.x, self.y)
 
     def approach_target(self, target_x, target_y, tolerance=200):
         delta_x = target_x - self.x
