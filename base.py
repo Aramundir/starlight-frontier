@@ -8,6 +8,7 @@ pygame.display.set_caption("Starlight Frontier")
 clock = pygame.time.Clock()
 
 all_ships = pygame.sprite.Group()
+projectiles = pygame.sprite.Group()
 player = entities.Ship.create(400, 300, 5, 'player')
 all_ships.add(player)
 
@@ -26,11 +27,25 @@ for star in range(100):
     pygame.draw.circle(star_surface, (255, 255, 255),
                       (random.randint(0, 800), random.randint(0, 600)), 1)
 
+shoot_cooldown = 0
+shoot_delay = 500
+
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+    if not player.alive():
+        font = pygame.font.SysFont(None, 48)
+        text = font.render("Game Over", True, (255, 0, 0))
+        screen.blit(text, (350, 300))
+        pygame.display.flip()
+        continue
+
+    shoot_cooldown -= clock.get_time()
+    if shoot_cooldown < 0:
+        shoot_cooldown = 0
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
@@ -47,14 +62,21 @@ while running:
         player.turn('right')
     if keys[pygame.K_x]:
         player.brake()
+    if keys[pygame.K_SPACE] and shoot_cooldown <= 0:
+        proj = player.fire_projectile()
+        projectiles.add(proj)
+        shoot_cooldown = shoot_delay
 
     all_ships.update()
+    projectiles.update()
 
     game_physics.check_for_ship_collision(all_ships)
+    game_physics.check_for_projectile_collisions(projectiles, all_ships)
 
     screen.blit(star_surface, (0, 0))
 
     all_ships.draw(screen)
+    projectiles.draw(screen)
 
 
     for enemy in enemies:

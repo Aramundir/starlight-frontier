@@ -138,6 +138,63 @@ class Ship(pygame.sprite.Sprite):
 
         return
 
+    def fire_projectile(self):
+        rad = math.radians(self.angle)
+        offset = 25
+        start_x = self.x + offset * math.cos(rad)
+        start_y = self.y - offset * math.sin(rad)
+        proj = Projectile(start_x, start_y, self.angle, self.x_vector, self.y_vector)
+        return proj
+
+    def update(self):
+        self.move()
+        self.image = pygame.transform.rotate(self.base_image, self.angle)
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+
+class Projectile(pygame.sprite.Sprite):
+    def __init__(self, x, y, angle, x_vector, y_vector, speed=10):
+        super().__init__()
+        self.x = float(x)
+        self.y = float(y)
+        self.angle = angle
+        self.x_vector = x_vector
+        self.y_vector = y_vector
+        self.speed = speed
+        self.base_image = None
+        self.image = None
+        self.rect = None
+        self.mask = None
+        self.get_image()
+        self.add_speed_vector()
+
+    @classmethod
+    def create(cls, x, y, angle, x_vector, y_vector, speed=10):
+        return cls(x, y, angle, x_vector, y_vector, speed)
+
+
+    def get_image(self):
+        self.base_image = pygame.Surface((10, 10), pygame.SRCALPHA)
+        self.base_image.fill((0, 0, 0, 0))
+        start_pos = (7.5, 5)
+        end_pos = (2.5, 5)
+        pygame.draw.line(self.base_image, (255, 255, 0), start_pos, end_pos, 2)
+        self.image = self.base_image.copy()
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+    def add_speed_vector(self):
+        rad = math.radians(self.angle)
+        self.x_vector += self.speed * math.cos(rad)
+        self.y_vector -= self.speed * math.sin(rad)
+
+    def move(self):
+        self.x += self.x_vector
+        self.y += self.y_vector
+
     def update(self):
         self.move()
         self.image = pygame.transform.rotate(self.base_image, self.angle)

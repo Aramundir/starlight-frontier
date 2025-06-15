@@ -37,3 +37,25 @@ def resolve_ship_collision(ship1, ship2):
 
         ship1.rect.center = (ship1.x, ship1.y)
         ship2.rect.center = (ship2.x, ship2.y)
+
+
+def check_for_projectile_collisions(projectiles, all_ships):
+    proj_list = list(projectiles)
+    for i, proj1 in enumerate(proj_list):
+        if not proj1.alive():
+            continue
+        if not (-10 <= proj1.x <= 810 and -10 <= proj1.y <= 610):
+            proj1.kill()
+            continue
+
+        rect_collisions = pygame.sprite.spritecollide(proj1, all_ships, False, pygame.sprite.collide_rect)
+        for ship in rect_collisions:
+            if pygame.sprite.collide_mask(proj1, ship):
+                ship.kill()
+                proj1.kill()
+                break
+        for proj2 in proj_list[i+1:]:
+            if proj2.alive() and proj1.rect.colliderect(proj2.rect):
+                if pygame.sprite.collide_mask(proj1, proj2):
+                    proj1.kill()
+                    proj2.kill()
