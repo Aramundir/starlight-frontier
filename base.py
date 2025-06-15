@@ -9,7 +9,7 @@ clock = pygame.time.Clock()
 
 all_ships = pygame.sprite.Group()
 projectiles = pygame.sprite.Group()
-player = entities.Ship.create(640, 360, 'player', 'scout')
+player = entities.Ship.create(640, 360, 'player', 'heavy_fighter')
 all_ships.add(player)
 
 game_physics = game_engine.Physics.create_for_gameloop()
@@ -36,7 +36,7 @@ while running:
     if not player.alive():
         font = pygame.font.SysFont(None, 48)
         text = font.render("Game Over - Press R to Restart", True, (255, 0, 0))
-        screen.blit(text, (640, 360))
+        screen.blit(text, (400, 360))
         keys = pygame.key.get_pressed()
         if keys[pygame.K_r]:
             all_ships.empty()
