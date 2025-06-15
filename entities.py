@@ -3,18 +3,17 @@ import pygame
 
 
 class Ship(pygame.sprite.Sprite):
-    def __init__(self, x, y, turn_rate, faction):
+    def __init__(self, x, y, faction, ship_class):
         super().__init__()
         self.x = float(x)
         self.y = float(y)
         self.angle = 0
         self.x_vector = 0
         self.y_vector = 0
-        self.max_speed = 10
-        self.forward_thrust = 0.1
-        self.side_thrust = 0.1
-        self.turn_rate = turn_rate
+        self.ship_stats = self.get_ship_stats(ship_class)
         self.color = self.get_color(faction)
+        self.shoot_cooldown = 0
+        self.shoot_delay = 500
         self.base_image = None
         self.image = None
         self.rect = None
@@ -22,8 +21,8 @@ class Ship(pygame.sprite.Sprite):
         self.get_image()
 
     @classmethod
-    def create(cls, x, y, turn_rate, faction):
-        return cls(x, y, turn_rate, faction)
+    def create(cls, x, y, faction, ship_class):
+        return cls(x, y, faction, ship_class)
 
     def get_image(self):
         self.base_image = pygame.Surface((50, 50), pygame.SRCALPHA)
@@ -46,9 +45,35 @@ class Ship(pygame.sprite.Sprite):
                  }
         return factions[faction]
 
+    def get_ship_stats(self, ship_class):
+        classes = {
+            'scout': {
+                'hardpoints':  [(15, 0)],
+                'max_speed': 12.0,
+                'forward_thrust': 0.15,
+                'side_thrust': 0.12,
+                'turn_rate': 6.0
+            },
+            'fighter': {
+                'hardpoints': [(-10, 10), (-10, -10)],
+                'max_speed': 10.0,
+                'forward_thrust': 0.1,
+                'side_thrust': 0.08,
+                'turn_rate': 5.0
+            },
+            'heavy_fighter': {
+                'hardpoints': [(15, 0), (-10, 10), (-10, -10)],
+                'max_speed': 8.0,
+                'forward_thrust': 0.08,
+                'side_thrust': 0.06,
+                'turn_rate': 3.0
+            }
+        }
+        return classes[ship_class]
+
     def accelerate(self, direction):
-        ax = math.cos(math.radians(self.angle)) * self.forward_thrust
-        ay = -math.sin(math.radians(self.angle)) * self.forward_thrust
+        ax = math.cos(math.radians(self.angle)) * self.ship_stats['forward_thrust']
+        ay = -math.sin(math.radians(self.angle)) * self.ship_stats['forward_thrust']
 
         if direction == 'forward':
             self.x_vector += ax
@@ -58,14 +83,14 @@ class Ship(pygame.sprite.Sprite):
             self.y_vector -= ay
 
         speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
-        if speed > self.max_speed:
-            scale = self.max_speed / speed
+        if speed > self.ship_stats['max_speed']:
+            scale = self.ship_stats['max_speed'] / speed
             self.x_vector *= scale
             self.y_vector *= scale
 
     def accelerate_lateral(self, direction):
-        ax = -math.sin(math.radians(self.angle)) * self.side_thrust
-        ay = -math.cos(math.radians(self.angle)) * self.side_thrust
+        ax = -math.sin(math.radians(self.angle)) * self.ship_stats['side_thrust']
+        ay = -math.cos(math.radians(self.angle)) * self.ship_stats['side_thrust']
 
         if direction == 'left':
             self.x_vector += ax
@@ -75,33 +100,33 @@ class Ship(pygame.sprite.Sprite):
             self.y_vector -= ay
 
         speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
-        if speed > self.max_speed:
-            scale = self.max_speed / speed
+        if speed > self.ship_stats['max_speed']:
+            scale = self.ship_stats['max_speed'] / speed
             self.x_vector *= scale
             self.y_vector *= scale
 
     def brake(self):
         speed = math.sqrt(self.x_vector ** 2 + self.y_vector ** 2)
         if speed > 0:
-            reduction_factor = self.forward_thrust / speed
+            reduction_factor = self.ship_stats['forward_thrust'] / speed
             self.x_vector -= self.x_vector * reduction_factor
             self.y_vector -= self.y_vector * reduction_factor
 
-            if speed < self.forward_thrust:
+            if speed < self.ship_stats['forward_thrust']:
                 self.x_vector = 0
                 self.y_vector = 0
 
     def turn(self, direction):
         if direction == 'left':
-            self.angle += self.turn_rate
+            self.angle += self.ship_stats['turn_rate']
         if direction == 'right':
-            self.angle -= self.turn_rate
+            self.angle -= self.ship_stats['turn_rate']
 
     def move(self):
         self.x += self.x_vector
         self.y += self.y_vector
-        self.x = self.x % 800
-        self.y = self.y % 600
+        self.x = self.x % 1280
+        self.y = self.y % 720
 
     def approach_target(self, target_x, target_y, tolerance=200):
         delta_x = target_x - self.x
@@ -136,21 +161,34 @@ class Ship(pygame.sprite.Sprite):
                     if angle_diff < 100:
                         self.accelerate_lateral('left')
 
-        return
+        return distance, alignment
 
     def fire_projectile(self):
+        if self.shoot_cooldown > 0:
+            return []
+        projectiles = []
         rad = math.radians(self.angle)
-        offset = 25
-        start_x = self.x + offset * math.cos(rad)
-        start_y = self.y - offset * math.sin(rad)
-        proj = Projectile(start_x, start_y, self.angle, self.x_vector, self.y_vector)
-        return proj
+        cos_a = math.cos(rad)
+        sin_a = math.sin(rad)
+        for hp_x, hp_y in self.ship_stats['hardpoints']:
+            offset_x = hp_x * cos_a - hp_y * sin_a
+            offset_y = hp_x * sin_a + hp_y * cos_a
+            start_x = self.x + offset_x
+            start_y = self.y - offset_y
+            proj = Projectile(start_x, start_y, self.angle, self.x_vector, self.y_vector)
+            projectiles.append(proj)
+        self.shoot_cooldown = self.shoot_delay
+        return projectiles
 
-    def update(self):
+    def update(self, dt=0):
         self.move()
         self.image = pygame.transform.rotate(self.base_image, self.angle)
         self.rect = self.image.get_rect(center=(self.x, self.y))
         self.mask = pygame.mask.from_surface(self.image)
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= dt
+            if self.shoot_cooldown < 0:
+                self.shoot_cooldown = 0
 
 
 

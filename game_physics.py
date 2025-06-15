@@ -44,7 +44,7 @@ def check_for_projectile_collisions(projectiles, all_ships):
     for i, proj1 in enumerate(proj_list):
         if not proj1.alive():
             continue
-        if not (-10 <= proj1.x <= 810 and -10 <= proj1.y <= 610):
+        if not (-10 <= proj1.x <= 1290 and -10 <= proj1.y <= 730):
             proj1.kill()
             continue
 
