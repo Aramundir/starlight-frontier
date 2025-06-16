@@ -64,7 +64,7 @@ class Ship(pygame.sprite.Sprite):
                 'hardpoints': [(-10, 10), (-10, -10)],
                 'max_speed': 10.0,
                 'forward_thrust': 0.1,
-                'side_thrust': 0.01,
+                'side_thrust': 0.1,
                 'turn_rate': 4.0,
                 'shape': [(20, 0), (-10, -9), (-10, 9)],
                 'size': 'small'
