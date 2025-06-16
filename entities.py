@@ -13,7 +13,6 @@ class Ship(pygame.sprite.Sprite):
         self.ship_stats = self.get_ship_stats(ship_class)
         self.color = self.get_color(faction)
         self.shoot_cooldown = 0
-        self.shoot_delay = 500
         self.base_image = None
         self.image = None
         self.rect = None
@@ -48,6 +47,7 @@ class Ship(pygame.sprite.Sprite):
     def get_ship_stats(self, ship_class):
         classes = {
             'scout': {
+                'shoot_delay': 600,
                 'hullpoints': 2,
                 'hardpoints':  [(15, 0)],
                 'max_speed': 12.0,
@@ -56,6 +56,7 @@ class Ship(pygame.sprite.Sprite):
                 'turn_rate': 8.0
             },
             'fighter': {
+                'shoot_delay': 300,
                 'hullpoints': 4,
                 'hardpoints': [(-10, 10), (-10, -10)],
                 'max_speed': 10.0,
@@ -64,6 +65,7 @@ class Ship(pygame.sprite.Sprite):
                 'turn_rate': 4.0
             },
             'heavy_fighter': {
+                'shoot_delay': 150,
                 'hullpoints': 6,
                 'hardpoints': [(15, 0), (-10, 10), (-10, -10)],
                 'max_speed': 8.0,
@@ -180,7 +182,7 @@ class Ship(pygame.sprite.Sprite):
             start_y = self.y - offset_y
             proj = Projectile(start_x, start_y, self.angle, self.x_vector, self.y_vector)
             projectiles.append(proj)
-        self.shoot_cooldown = self.shoot_delay
+        self.shoot_cooldown = self.ship_stats['shoot_delay']
         return projectiles
 
     def update(self, dt=0):
