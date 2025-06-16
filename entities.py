@@ -137,8 +137,6 @@ class Ship(pygame.sprite.Sprite):
     def move(self):
         self.x += self.x_vector
         self.y += self.y_vector
-        self.x = self.x % 1280
-        self.y = self.y % 720
 
     def approach_target(self, target_x, target_y, tolerance=200):
         delta_x = target_x - self.x

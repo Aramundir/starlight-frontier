@@ -15,7 +15,7 @@ screen_painter = game_engine.ScreenPainter.create_for_gameloop()
 
 difficulty = 1
 
-player, enemies = spawner.setup_game(all_ships, projectiles, (640, 360), 5, difficulty)
+player, enemies = spawner.setup_game(all_ships, projectiles, (2000, 2000), 5, difficulty)
 
 star_surface = screen_painter.create_a_star_surface()
 
@@ -71,7 +71,17 @@ while running:
     game_physics.check_for_ship_collision(all_ships)
     game_physics.check_for_projectile_collisions(projectiles, all_ships)
 
-    screen.blit(star_surface, (0, 0))
+    camera_x = player.x - 640
+    camera_y = player.y - 360
+    camera_x = max(0, min(camera_x, game_physics.world_width - 1280))
+    camera_y = max(0, min(camera_y, game_physics.world_height - 720))
+
+    screen.fill((0, 0, 0))
+    screen.blit(star_surface, (-camera_x, -camera_y))
+    for ship in all_ships:
+        ship.rect.center = (ship.x - camera_x, ship.y - camera_y)
+    for proj in projectiles:
+        proj.rect.center = (proj.x - camera_x, proj.y - camera_y)
 
     all_ships.draw(screen)
     projectiles.draw(screen)

@@ -4,6 +4,9 @@ import pygame
 
 
 class Physics(object):
+    def __init__(self):
+        self.world_width = 4000
+        self.world_height = 4000
 
     @classmethod
     def create_for_gameloop(cls):
@@ -11,6 +14,7 @@ class Physics(object):
 
     def check_for_ship_collision(self, all_ships):
         for ship1 in all_ships:
+            self.check_world_bounds(ship1)
             rect_collisions = pygame.sprite.spritecollide(ship1, all_ships, False, pygame.sprite.collide_rect)
             for ship2 in rect_collisions:
                 if ship1 != ship2:
@@ -48,7 +52,7 @@ class Physics(object):
         for i, proj1 in enumerate(proj_list):
             if not proj1.alive():
                 continue
-            if not (-10 <= proj1.x <= 1290 and -10 <= proj1.y <= 730):
+            if not (0 <= proj1.x <= self.world_width and 0 <= proj1.y <= self.world_height):
                 proj1.kill()
                 continue
 
@@ -66,11 +70,29 @@ class Physics(object):
                         proj1.kill()
                         proj2.kill()
 
+    def check_world_bounds(self, ship):
+        bounds_actions = {
+            'left': lambda: setattr(ship, 'x', 0) or setattr(ship, 'x_vector', max(0, ship.x_vector)),
+            'right': lambda: setattr(ship, 'x', self.world_width) or setattr(ship, 'x_vector', min(0, ship.x_vector)),
+            'top': lambda: setattr(ship, 'y', 0) or setattr(ship, 'y_vector', max(0, ship.y_vector)),
+            'bottom': lambda: setattr(ship, 'y', self.world_height) or setattr(ship, 'y_vector', min(0, ship.y_vector))
+        }
+        if ship.x < 0:
+            bounds_actions['left']()
+        if ship.x > self.world_width:
+            bounds_actions['right']()
+        if ship.y < 0:
+            bounds_actions['top']()
+        if ship.y > self.world_height:
+            bounds_actions['bottom']()
+        ship.rect.center = (ship.x, ship.y)
+
 
 class Spawner(object):
-
     def __init__(self, entities):
         self.entities = entities
+        self.world_width = 4000
+        self.world_height = 4000
 
     @classmethod
     def create_for_gameloop(cls, entities):
@@ -87,8 +109,8 @@ class Spawner(object):
         }
         for _ in range(num_enemies):
             while True:
-                x = random.randint(0, 1280)
-                y = random.randint(0, 720)
+                x = random.randint(0, self.world_width)
+                y = random.randint(0, self.world_height)
                 distance = math.sqrt((x - player_pos[0]) ** 2 + (y - player_pos[1]) ** 2)
                 if distance >= min_distance:
                     break
@@ -108,17 +130,20 @@ class Spawner(object):
 
 
 class ScreenPainter(object):
+    def __init__(self):
+        self.world_width = 4000
+        self.world_height = 4000
 
     @classmethod
     def create_for_gameloop(cls):
         return cls()
 
     def create_a_star_surface(self):
-        star_surface = pygame.Surface((1280, 720))
+        star_surface = pygame.Surface((self.world_width, self.world_height))
         star_surface.fill((0, 0, 0))
-        for star in range(150):
+        for star in range(1500):
             pygame.draw.circle(star_surface, (255, 255, 255),
-                               (random.randint(0, 1280), random.randint(0, 720)), 1)
+                               (random.randint(0, self.world_width), random.randint(0, self.world_height)), 1)
         return star_surface
 
     def display_end_screen(self, screen, status):
