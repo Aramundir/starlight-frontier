@@ -48,6 +48,7 @@ class Ship(pygame.sprite.Sprite):
     def get_ship_stats(self, ship_class):
         classes = {
             'scout': {
+                'hullpoints': 2,
                 'hardpoints':  [(15, 0)],
                 'max_speed': 12.0,
                 'forward_thrust': 0.15,
@@ -55,6 +56,7 @@ class Ship(pygame.sprite.Sprite):
                 'turn_rate': 6.0
             },
             'fighter': {
+                'hullpoints': 4,
                 'hardpoints': [(-10, 10), (-10, -10)],
                 'max_speed': 10.0,
                 'forward_thrust': 0.1,
@@ -62,6 +64,7 @@ class Ship(pygame.sprite.Sprite):
                 'turn_rate': 5.0
             },
             'heavy_fighter': {
+                'hullpoints': 6,
                 'hardpoints': [(15, 0), (-10, 10), (-10, -10)],
                 'max_speed': 8.0,
                 'forward_thrust': 0.08,
@@ -190,6 +193,13 @@ class Ship(pygame.sprite.Sprite):
             if self.shoot_cooldown < 0:
                 self.shoot_cooldown = 0
 
+    @property
+    def hullpoints(self):
+        return self.ship_stats['hullpoints']
+
+    @hullpoints.setter
+    def hullpoints(self, value):
+        self.ship_stats['hullpoints'] = max(0, value)
 
 
 class Projectile(pygame.sprite.Sprite):

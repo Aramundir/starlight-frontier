@@ -58,8 +58,10 @@ class Physics(object):
             rect_collisions = pygame.sprite.spritecollide(proj1, all_ships, False, pygame.sprite.collide_rect)
             for ship in rect_collisions:
                 if pygame.sprite.collide_mask(proj1, ship):
-                    ship.kill()
+                    ship.hullpoints -= 1
                     proj1.kill()
+                    if ship.hullpoints <= 0:
+                        ship.kill()
                     break
             for proj2 in proj_list[i+1:]:
                 if proj2.alive() and proj1.rect.colliderect(proj2.rect):
