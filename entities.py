@@ -51,25 +51,25 @@ class Ship(pygame.sprite.Sprite):
                 'hullpoints': 2,
                 'hardpoints':  [(15, 0)],
                 'max_speed': 12.0,
-                'forward_thrust': 0.15,
-                'side_thrust': 0.12,
-                'turn_rate': 6.0
+                'forward_thrust': 0.2,
+                'side_thrust': 0.2,
+                'turn_rate': 8.0
             },
             'fighter': {
                 'hullpoints': 4,
                 'hardpoints': [(-10, 10), (-10, -10)],
                 'max_speed': 10.0,
                 'forward_thrust': 0.1,
-                'side_thrust': 0.08,
-                'turn_rate': 5.0
+                'side_thrust': 0.01,
+                'turn_rate': 4.0
             },
             'heavy_fighter': {
                 'hullpoints': 6,
                 'hardpoints': [(15, 0), (-10, 10), (-10, -10)],
                 'max_speed': 8.0,
-                'forward_thrust': 0.08,
-                'side_thrust': 0.06,
-                'turn_rate': 3.0
+                'forward_thrust': 0.05,
+                'side_thrust': 0.05,
+                'turn_rate': 2.0
             }
         }
         return classes[ship_class]
