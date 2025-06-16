@@ -26,12 +26,7 @@ class Ship(pygame.sprite.Sprite):
     def get_image(self):
         self.base_image = pygame.Surface((50, 50), pygame.SRCALPHA)
         self.base_image.fill((250, 250, 250, 0))
-        base_points = [
-            (45, 25),
-            (20, 18),
-            (20, 32)
-        ]
-        pygame.draw.polygon(self.base_image, self.color, base_points)
+        pygame.draw.polygon(self.base_image, self.color, self.ship_stats['shape'])
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(self.x, self.y))
         self.mask = pygame.mask.from_surface(self.image)
@@ -53,7 +48,8 @@ class Ship(pygame.sprite.Sprite):
                 'max_speed': 12.0,
                 'forward_thrust': 0.2,
                 'side_thrust': 0.2,
-                'turn_rate': 8.0
+                'turn_rate': 8.0,
+                'shape': [(40, 25), (20, 18), (20, 32)]
             },
             'fighter': {
                 'shoot_delay': 300,
@@ -62,16 +58,18 @@ class Ship(pygame.sprite.Sprite):
                 'max_speed': 10.0,
                 'forward_thrust': 0.1,
                 'side_thrust': 0.01,
-                'turn_rate': 4.0
+                'turn_rate': 4.0,
+                'shape': [(45, 25), (20, 18), (20, 32)]
             },
             'heavy_fighter': {
                 'shoot_delay': 150,
                 'hullpoints': 6,
-                'hardpoints': [(15, 0), (-10, 10), (-10, -10)],
+                'hardpoints': [(10,0),(-10,18),(-10,-18)],
                 'max_speed': 8.0,
                 'forward_thrust': 0.05,
                 'side_thrust': 0.05,
-                'turn_rate': 2.0
+                'turn_rate': 2.0,
+                'shape': [(35, 25), (20, 10), (20, 40)]
             }
         }
         return classes[ship_class]

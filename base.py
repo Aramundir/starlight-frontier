@@ -82,7 +82,7 @@ while running:
             enemies.remove(enemy)
             continue
         distance, aligmnent = enemy.approach_target(player.x, player.y)
-        if distance < 200 and aligmnent >= 0.9:
+        if distance < 200 and aligmnent <= 0.4:
             projs = enemy.fire_projectile()
             for proj in projs:
                 projectiles.add(proj)
