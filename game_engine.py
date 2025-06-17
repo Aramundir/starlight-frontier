@@ -71,20 +71,18 @@ class Physics(object):
                         proj2.kill()
 
     def check_world_bounds(self, ship):
-        bounds_actions = {
-            'left': lambda: setattr(ship, 'x', 0) or setattr(ship, 'x_vector', max(0, ship.x_vector)),
-            'right': lambda: setattr(ship, 'x', self.world_width) or setattr(ship, 'x_vector', min(0, ship.x_vector)),
-            'top': lambda: setattr(ship, 'y', 0) or setattr(ship, 'y_vector', max(0, ship.y_vector)),
-            'bottom': lambda: setattr(ship, 'y', self.world_height) or setattr(ship, 'y_vector', min(0, ship.y_vector))
-        }
         if ship.x < 0:
-            bounds_actions['left']()
+            ship.x = 0
+            ship.x_vector = max(0, ship.x_vector)
         if ship.x > self.world_width:
-            bounds_actions['right']()
+            ship.x = self.world_width
+            ship.x_vector = min(0, ship.x_vector)
         if ship.y < 0:
-            bounds_actions['top']()
+            ship.y = 0
+            ship.y_vector = max(0, ship.y_vector)
         if ship.y > self.world_height:
-            bounds_actions['bottom']()
+            ship.y = self.world_height
+            ship.y_vector = min(0, ship.y_vector)
         ship.rect.center = (ship.x, ship.y)
 
 
@@ -155,3 +153,35 @@ class ScreenPainter(object):
         text = screen_text[status]
         text_rect = text.get_rect(center=(640, 360))  # Center on 1280x720
         screen.blit(text, text_rect)
+
+
+class HUD:
+    def __init__(self, screen_width, screen_height):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.hull_color = (0, 255, 0)
+        self.hull_width = 50
+        self.hull_height = 5
+        self.hull_offset_y = 25
+
+
+    @classmethod
+    def create_for_gameloop(cls, screen_width, screen_height):
+        return cls(screen_width, screen_height)
+
+    def draw_hull_meter(self, screen, player, camera_x, camera_y):
+        center_x = player.x - camera_x
+        center_y = player.y - camera_y
+        hull_ratio = player.hullpoints / player.max_hullpoints
+        hull_current_width = self.hull_width * hull_ratio
+        hull_x = center_x - self.hull_width / 2
+        hull_y = center_y + self.hull_offset_y
+        pygame.draw.rect(screen, self.hull_color,
+                         (hull_x, hull_y, hull_current_width, self.hull_height))
+        pygame.draw.rect(screen, (100, 100, 100),
+                         (hull_x, hull_y, self.hull_width, self.hull_height), 1)
+
+
+    def draw(self, screen, player, enemies, camera_x, camera_y):
+        self.draw_hull_meter(screen, player, camera_x, camera_y)
+        self.draw_offscreen_arrows(screen, player, enemies, camera_x, camera_y)

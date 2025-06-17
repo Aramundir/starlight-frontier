@@ -12,6 +12,7 @@ projectiles = pygame.sprite.Group()
 game_physics = game_engine.Physics.create_for_gameloop()
 spawner = game_engine.Spawner.create_for_gameloop(entities)
 screen_painter = game_engine.ScreenPainter.create_for_gameloop()
+hud = game_engine.HUD.create_for_gameloop(1280, 720)
 
 difficulty = 1
 
@@ -83,6 +84,7 @@ while running:
     for proj in projectiles:
         proj.rect.center = (proj.x - camera_x, proj.y - camera_y)
 
+    hud.draw(screen, player, enemies, camera_x, camera_y)
     all_ships.draw(screen)
     projectiles.draw(screen)
 
@@ -92,7 +94,7 @@ while running:
             enemies.remove(enemy)
             continue
         distance, alignment = enemy.approach_target(player.x, player.y)
-        if distance < 200 and alignment <= 0.1:
+        if distance < 500 and alignment <= 0.2:
             projs = enemy.fire_projectile()
             for proj in projs:
                 projectiles.add(proj)

@@ -12,6 +12,7 @@ class Ship(pygame.sprite.Sprite):
         self.y_vector = 0
         self.ship_stats = self.get_ship_stats(ship_class)
         self.color = self.get_color(faction)
+        self.max_hullpoints = self.ship_stats['hullpoints']
         self.shoot_cooldown = 0
         self.base_image = None
         self.image = None
