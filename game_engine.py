@@ -120,7 +120,7 @@ class Spawner(object):
     def setup_game(self, all_ships, projectiles, player_pos, num_enemies, difficulty):
         all_ships.empty()
         projectiles.empty()
-        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', 'heavy_fighter')
+        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', 'scout')
         all_ships.add(player)
         enemies = self.spawn_enemies(num_enemies, player_pos, difficulty)
         all_ships.add(enemies)
@@ -189,15 +189,14 @@ class HUD:
                 continue
             enemy_screen_x = enemy.x - camera_x
             enemy_screen_y = enemy.y - camera_y
-            if (0 <= enemy_screen_x <= self.screen_width and
-                0 <= enemy_screen_y <= self.screen_height):
+            if 0 <= enemy_screen_x <= self.screen_width and 0 <= enemy_screen_y <= self.screen_height:
                 continue
             player_screen_x = player.x - camera_x
             player_screen_y = player.y - camera_y
             dx = enemy_screen_x - player_screen_x
             dy = enemy_screen_y - player_screen_y
             distance = math.sqrt(dx ** 2 + dy ** 2)
-            if distance == 0:
+            if distance < 1:
                 continue
             nx = dx / distance
             ny = dy / distance
@@ -205,7 +204,15 @@ class HUD:
             t_right = (self.screen_width - self.arrow_margin - player_screen_x) / nx if nx != 0 else float('inf')
             t_top = (self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
             t_bottom = (self.screen_height - self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
-            t_values = [t for t in [t_left, t_right, t_top, t_bottom] if t > 0]
+            t_values = []
+            if nx > 0 and t_right > 0:
+                t_values.append(t_right)
+            if nx < 0 < t_left:
+                t_values.append(t_left)
+            if ny > 0 and t_bottom > 0:
+                t_values.append(t_bottom)
+            if ny < 0 < t_top:
+                t_values.append(t_top)
             if not t_values:
                 continue
             t = min(t_values)
