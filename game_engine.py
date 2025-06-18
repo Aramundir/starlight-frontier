@@ -120,7 +120,7 @@ class Spawner(object):
     def setup_game(self, all_ships, projectiles, player_pos, num_enemies, difficulty):
         all_ships.empty()
         projectiles.empty()
-        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', 'fighter')
+        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', 'heavy_fighter')
         all_ships.add(player)
         enemies = self.spawn_enemies(num_enemies, player_pos, difficulty)
         all_ships.add(enemies)
@@ -160,10 +160,12 @@ class HUD:
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.hull_color = (0, 255, 0)
+        self.arrow_color = (255, 0, 0)
         self.hull_width = 50
         self.hull_height = 5
         self.hull_offset_y = 25
-
+        self.arrow_size = 8
+        self.arrow_margin = 10
 
     @classmethod
     def create_for_gameloop(cls, screen_width, screen_height):
@@ -181,6 +183,45 @@ class HUD:
         pygame.draw.rect(screen, (100, 100, 100),
                          (hull_x, hull_y, self.hull_width, self.hull_height), 1)
 
+    def draw_offscreen_arrows(self, screen, player, enemies, camera_x, camera_y):
+        for enemy in enemies:
+            if not enemy.alive():
+                continue
+            enemy_screen_x = enemy.x - camera_x
+            enemy_screen_y = enemy.y - camera_y
+            if (0 <= enemy_screen_x <= self.screen_width and
+                0 <= enemy_screen_y <= self.screen_height):
+                continue
+            player_screen_x = player.x - camera_x
+            player_screen_y = player.y - camera_y
+            dx = enemy_screen_x - player_screen_x
+            dy = enemy_screen_y - player_screen_y
+            distance = math.sqrt(dx ** 2 + dy ** 2)
+            if distance == 0:
+                continue
+            nx = dx / distance
+            ny = dy / distance
+            t_left = (self.arrow_margin - player_screen_x) / nx if nx != 0 else float('inf')
+            t_right = (self.screen_width - self.arrow_margin - player_screen_x) / nx if nx != 0 else float('inf')
+            t_top = (self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
+            t_bottom = (self.screen_height - self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
+            t_values = [t for t in [t_left, t_right, t_top, t_bottom] if t > 0]
+            if not t_values:
+                continue
+            t = min(t_values)
+            intersect_x = player_screen_x + nx * t
+            intersect_y = player_screen_y + ny * t
+            intersect_x = max(self.arrow_margin, min(intersect_x, self.screen_width - self.arrow_margin))
+            intersect_y = max(self.arrow_margin, min(intersect_y, self.screen_height - self.arrow_margin))
+            angle = math.degrees(math.atan2(-ny, nx)) + 180
+            points = [
+                (intersect_x, intersect_y),
+                (intersect_x - self.arrow_size * math.cos(math.radians(angle + 150)),
+                 intersect_y + self.arrow_size * math.sin(math.radians(angle + 150))),
+                (intersect_x - self.arrow_size * math.cos(math.radians(angle - 150)),
+                 intersect_y + self.arrow_size * math.sin(math.radians(angle - 150)))
+            ]
+            pygame.draw.polygon(screen, self.arrow_color, points)
 
     def draw(self, screen, player, enemies, camera_x, camera_y):
         self.draw_hull_meter(screen, player, camera_x, camera_y)
