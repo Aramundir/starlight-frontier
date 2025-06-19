@@ -3,6 +3,32 @@ import random
 import pygame
 
 
+class Camera(object):
+    def __init__(self, screen_width, screen_height, player):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.player = player
+        self.x = None
+        self.y = None
+
+    @classmethod
+    def create_for_gameloop(cls, screen_width, screen_height, player):
+        return cls(screen_width, screen_height, player)
+
+    def get_ship_screen_coordinates(self, ship):
+        screen_x = ship.x - self.x
+        screen_y = ship.y - self.y
+        return [screen_x, screen_y]
+
+    def get_multiple_ship_screen_coordinates(self, ships):
+        return {ship: self.get_ship_screen_coordinates(ship) for ship in ships}
+
+    def update(self, world_width, world_height):
+        self.x = self.player.x - self.screen_width / 2
+        self.y = self.player.y - self.screen_height / 2
+        self.x = max(0, min(self.x, world_width - self.screen_width))
+        self.y = max(0, min(self.y, world_height - self.screen_height))
+
 class Physics(object):
     def __init__(self):
         self.world_width = 4000
@@ -86,7 +112,7 @@ class Physics(object):
         ship.rect.center = (ship.x, ship.y)
 
 
-class Spawner(object):
+class GameMaster(object):
     def __init__(self, entities):
         self.entities = entities
         self.world_width = 4000
@@ -156,9 +182,10 @@ class ScreenPainter(object):
 
 
 class HUD:
-    def __init__(self, screen_width, screen_height):
-        self.screen_width = screen_width
-        self.screen_height = screen_height
+    def __init__(self, camera):
+        self.screen_width = camera.screen_width
+        self.screen_height = camera.screen_height
+        self.camera = camera
         self.hull_color = (0, 255, 0)
         self.arrow_color = (255, 0, 0)
         self.hull_width = 50
@@ -168,68 +195,94 @@ class HUD:
         self.arrow_margin = 10
 
     @classmethod
-    def create_for_gameloop(cls, screen_width, screen_height):
-        return cls(screen_width, screen_height)
+    def create_for_gameloop(cls, camera):
+        return cls(camera)
 
-    def draw_hull_meter(self, screen, player, camera_x, camera_y):
-        center_x = player.x - camera_x
-        center_y = player.y - camera_y
+    def draw_hull_meter(self, screen, player):
+        player_coords = self.camera.get_ship_screen_coordinates(player)
         hull_ratio = player.hullpoints / player.max_hullpoints
         hull_current_width = self.hull_width * hull_ratio
-        hull_x = center_x - self.hull_width / 2
-        hull_y = center_y + self.hull_offset_y
+        hull_x = player_coords[0] - self.hull_width / 2
+        hull_y = player_coords[1] + self.hull_offset_y
         pygame.draw.rect(screen, self.hull_color,
                          (hull_x, hull_y, hull_current_width, self.hull_height))
         pygame.draw.rect(screen, (100, 100, 100),
                          (hull_x, hull_y, self.hull_width, self.hull_height), 1)
 
-    def draw_offscreen_arrows(self, screen, player, enemies, camera_x, camera_y):
+    def _is_enemy_offscreen(self, enemy_screen_coords):
+        x, y = enemy_screen_coords
+        return not (0 <= x <= self.screen_width and 0 <= y <= self.screen_height)
+
+    def _calculate_direction_vector(self, player_coords, enemy_coords):
+        dx = enemy_coords[0] - player_coords[0]
+        dy = enemy_coords[1] - player_coords[1]
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+        if distance < 1:
+            return None, None, None
+        nx = dx / distance
+        ny = dy / distance
+        return nx, ny, distance
+
+    def _calculate_t_values(self, player_coords, nx, ny):
+        t_left = (self.arrow_margin - player_coords[0]) / nx if nx != 0 else float('inf')
+        t_right = (self.screen_width - self.arrow_margin - player_coords[0]) / nx if nx != 0 else float('inf')
+        t_top = (self.arrow_margin - player_coords[1]) / ny if ny != 0 else float('inf')
+        t_bottom = (self.screen_height - self.arrow_margin - player_coords[1]) / ny if ny != 0 else float('inf')
+        return t_left, t_right, t_top, t_bottom
+
+    def _select_intersection_t(self, nx, ny, t_left, t_right, t_top, t_bottom):
+        t_values = []
+        if nx > 0 and t_right > 0:
+            t_values.append(t_right)
+        if nx < 0 < t_left:
+            t_values.append(t_left)
+        if ny > 0 and t_bottom > 0:
+            t_values.append(t_bottom)
+        if ny < 0 < t_top:
+            t_values.append(t_top)
+        return min(t_values) if t_values else None
+
+    def _calculate_intersection_point(self, player_coords, nx, ny, t):
+        intersect_x = player_coords[0] + nx * t
+        intersect_y = player_coords[1] + ny * t
+        intersect_x = max(self.arrow_margin, min(intersect_x, self.screen_width - self.arrow_margin))
+        intersect_y = max(self.arrow_margin, min(intersect_y, self.screen_height - self.arrow_margin))
+        return intersect_x, intersect_y
+
+    def _draw_arrow(self, screen, intersect_x, intersect_y, nx, ny):
+        angle = math.degrees(math.atan2(-ny, nx)) + 180
+        points = [
+            (intersect_x, intersect_y),
+            (intersect_x - self.arrow_size * math.cos(math.radians(angle + 150)),
+             intersect_y + self.arrow_size * math.sin(math.radians(angle + 150))),
+            (intersect_x - self.arrow_size * math.cos(math.radians(angle - 150)),
+             intersect_y + self.arrow_size * math.sin(math.radians(angle - 150)))
+        ]
+        pygame.draw.polygon(screen, self.arrow_color, points)
+
+    def draw_offscreen_arrows(self, screen, player, enemies):
+        ship_coords = self.camera.get_multiple_ship_screen_coordinates([player] + list(enemies))
+        player_coords = ship_coords[player]
+
         for enemy in enemies:
             if not enemy.alive():
                 continue
-            enemy_screen_x = enemy.x - camera_x
-            enemy_screen_y = enemy.y - camera_y
-            if 0 <= enemy_screen_x <= self.screen_width and 0 <= enemy_screen_y <= self.screen_height:
+            enemy_coords = ship_coords[enemy]
+            if not self._is_enemy_offscreen(enemy_coords):
                 continue
-            player_screen_x = player.x - camera_x
-            player_screen_y = player.y - camera_y
-            dx = enemy_screen_x - player_screen_x
-            dy = enemy_screen_y - player_screen_y
-            distance = math.sqrt(dx ** 2 + dy ** 2)
-            if distance < 1:
-                continue
-            nx = dx / distance
-            ny = dy / distance
-            t_left = (self.arrow_margin - player_screen_x) / nx if nx != 0 else float('inf')
-            t_right = (self.screen_width - self.arrow_margin - player_screen_x) / nx if nx != 0 else float('inf')
-            t_top = (self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
-            t_bottom = (self.screen_height - self.arrow_margin - player_screen_y) / ny if ny != 0 else float('inf')
-            t_values = []
-            if nx > 0 and t_right > 0:
-                t_values.append(t_right)
-            if nx < 0 < t_left:
-                t_values.append(t_left)
-            if ny > 0 and t_bottom > 0:
-                t_values.append(t_bottom)
-            if ny < 0 < t_top:
-                t_values.append(t_top)
-            if not t_values:
-                continue
-            t = min(t_values)
-            intersect_x = player_screen_x + nx * t
-            intersect_y = player_screen_y + ny * t
-            intersect_x = max(self.arrow_margin, min(intersect_x, self.screen_width - self.arrow_margin))
-            intersect_y = max(self.arrow_margin, min(intersect_y, self.screen_height - self.arrow_margin))
-            angle = math.degrees(math.atan2(-ny, nx)) + 180
-            points = [
-                (intersect_x, intersect_y),
-                (intersect_x - self.arrow_size * math.cos(math.radians(angle + 150)),
-                 intersect_y + self.arrow_size * math.sin(math.radians(angle + 150))),
-                (intersect_x - self.arrow_size * math.cos(math.radians(angle - 150)),
-                 intersect_y + self.arrow_size * math.sin(math.radians(angle - 150)))
-            ]
-            pygame.draw.polygon(screen, self.arrow_color, points)
 
-    def draw(self, screen, player, enemies, camera_x, camera_y):
-        self.draw_hull_meter(screen, player, camera_x, camera_y)
-        self.draw_offscreen_arrows(screen, player, enemies, camera_x, camera_y)
+            nx, ny, distance = self._calculate_direction_vector(player_coords, enemy_coords)
+            if distance is None:
+                continue
+
+            t_left, t_right, t_top, t_bottom = self._calculate_t_values(player_coords, nx, ny)
+            t = self._select_intersection_t(nx, ny, t_left, t_right, t_top, t_bottom)
+            if t is None:
+                continue
+
+            intersect_x, intersect_y = self._calculate_intersection_point(player_coords, nx, ny, t)
+            self._draw_arrow(screen, intersect_x, intersect_y, nx, ny)
+
+    def draw(self, screen, player, enemies):
+        self.draw_hull_meter(screen, player)
+        self.draw_offscreen_arrows(screen, player, enemies)

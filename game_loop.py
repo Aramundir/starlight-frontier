@@ -2,7 +2,9 @@ import pygame
 import entities, game_engine
 
 pygame.init()
-screen = pygame.display.set_mode((1280, 720))
+screen_width = 1280
+screen_height = 720
+screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Starlight Frontier")
 clock = pygame.time.Clock()
 
@@ -10,15 +12,17 @@ all_ships = pygame.sprite.Group()
 projectiles = pygame.sprite.Group()
 
 game_physics = game_engine.Physics.create_for_gameloop()
-spawner = game_engine.Spawner.create_for_gameloop(entities)
+game_master = game_engine.GameMaster.create_for_gameloop(entities)
 screen_painter = game_engine.ScreenPainter.create_for_gameloop()
-hud = game_engine.HUD.create_for_gameloop(1280, 720)
+star_surface = screen_painter.create_a_star_surface()
 
 difficulty = 1
+player, enemies = game_master.setup_game(all_ships, projectiles, (2000, 2000), 5, difficulty)
 
-player, enemies = spawner.setup_game(all_ships, projectiles, (2000, 2000), 5, difficulty)
+camera = game_engine.Camera.create_for_gameloop(screen_width, screen_height, player)
+hud = game_engine.HUD.create_for_gameloop(camera)
 
-star_surface = screen_painter.create_a_star_surface()
+
 
 running = True
 while running:
@@ -32,7 +36,9 @@ while running:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_r]:
             difficulty = 1
-            player, enemies = spawner.setup_game(all_ships, projectiles, (640, 360), 5, difficulty)
+            player, enemies = game_master.setup_game(all_ships, projectiles, (2000, 2000), 5, difficulty)
+            camera = game_engine.Camera.create_for_gameloop(screen_width, screen_height, player)
+            hud = game_engine.HUD.create_for_gameloop(camera)
         pygame.display.flip()
         continue
 
@@ -42,7 +48,9 @@ while running:
         if keys[pygame.K_r]:
             if difficulty < 5:
                 difficulty += 1
-            player, enemies = spawner.setup_game(all_ships, projectiles, (640, 360), 5, difficulty)
+            player, enemies = game_master.setup_game(all_ships, projectiles, (2000, 2000), 5, difficulty)
+            camera = game_engine.Camera.create_for_gameloop(screen_width, screen_height, player)
+            hud = game_engine.HUD.create_for_gameloop(camera)
         pygame.display.flip()
         continue
 
@@ -72,19 +80,16 @@ while running:
     game_physics.check_for_ship_collision(all_ships)
     game_physics.check_for_projectile_collisions(projectiles, all_ships)
 
-    camera_x = player.x - 640
-    camera_y = player.y - 360
-    camera_x = max(0, min(camera_x, game_physics.world_width - 1280))
-    camera_y = max(0, min(camera_y, game_physics.world_height - 720))
+    camera.update(4000, 4000)
 
     screen.fill((0, 0, 0))
-    screen.blit(star_surface, (-camera_x, -camera_y))
+    screen.blit(star_surface, (-camera.x, -camera.y))
     for ship in all_ships:
-        ship.rect.center = (ship.x - camera_x, ship.y - camera_y)
+        ship.rect.center = (ship.x - camera.x, ship.y - camera.y)
     for proj in projectiles:
-        proj.rect.center = (proj.x - camera_x, proj.y - camera_y)
+        proj.rect.center = (proj.x - camera.x, proj.y - camera.y)
 
-    hud.draw(screen, player, enemies, camera_x, camera_y)
+    hud.draw(screen, player, enemies)
     all_ships.draw(screen)
     projectiles.draw(screen)
 
