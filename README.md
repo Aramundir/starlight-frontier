@@ -83,20 +83,48 @@ Each ship uses thrusters for acceleration and lateral movement, adhering to Newt
 - Python 3.12
 - Pygame 2.6.1
 
-Install dependencies using:
-
-```bash
-pip install pygame
-```
-
 ---
 
-## ▶️ Running the Game 
+## ▶️ Running the Game
 
-To start playing, run:
+To run **Starlight Frontier** in an isolated environment, follow these steps:
+
+1. **Create a virtual environment** (first time only):
+	
+	```bash
+	python -m venv venv
+	```
+
+2. **Activate the virtual environment**:
+
+	- On macOS/Linux:
+	
+		```bash
+		source venv/bin/activate
+		```
+
+	- On Windows (CMD):
+	
+		```bash
+		venv\Scripts\activate
+		```
+
+3. **Install dependencies from `requirements.txt`**:
+
+	```bash
+	pip install -r requirements.txt
+	```
+
+4. **Run the game**:
+
+	```bash
+	python game_loop.py
+	```
+
+To deactivate the environment later:
 
 ```bash
-python game_loop.py
+deactivate
 ```
 
 ---
@@ -131,4 +159,3 @@ Built with Python and Pygame
 ## 🛰️ Screenshots
 
 _I will add a few gameplay images here once available:_
-
