@@ -24,8 +24,6 @@ player, enemies = game_master.setup_game(all_ships, projectiles, (2000, 2000), 5
 camera = game_engine.Camera.create_for_gameloop(screen_width, screen_height, player)
 hud = game_engine.HUD.create_for_gameloop(camera)
 
-
-
 running = True
 while running:
     dt = clock.get_time()
@@ -72,7 +70,7 @@ while running:
     if keys[pygame.K_x]:
         player.brake()
     if keys[pygame.K_SPACE]:
-        projs = player.fire_projectile()
+        projs = player.fire()
         for proj in projs:
             projectiles.add(proj)
 
@@ -95,17 +93,15 @@ while running:
     projectiles.draw(screen)
     hud.draw(screen, player, enemies)
 
-
     for enemy in enemies[:]:
         if not enemy.alive():
             enemies.remove(enemy)
             continue
         distance, alignment = enemy.approach_target(player.x, player.y)
         if distance < 500 and alignment <= 0.2:
-            projs = enemy.fire_projectile()
+            projs = enemy.fire()
             for proj in projs:
                 projectiles.add(proj)
-
 
     pygame.display.flip()
     clock.tick(60)

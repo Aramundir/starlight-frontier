@@ -3,7 +3,7 @@ import random
 import pygame
 
 
-class Camera(object):
+class Camera:
     def __init__(self, screen_width, screen_height, player):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -29,7 +29,8 @@ class Camera(object):
         self.x = max(0, min(self.x, world_width - self.screen_width))
         self.y = max(0, min(self.y, world_height - self.screen_height))
 
-class Physics(object):
+
+class Physics:
     def __init__(self):
         self.world_width = 4000
         self.world_height = 4000
@@ -90,7 +91,7 @@ class Physics(object):
                     if ship.hullpoints <= 0:
                         ship.kill()
                     break
-            for proj2 in proj_list[i+1:]:
+            for proj2 in proj_list[i + 1:]:
                 if proj2.alive() and proj1.rect.colliderect(proj2.rect):
                     if pygame.sprite.collide_mask(proj1, proj2):
                         proj1.kill()
@@ -112,7 +113,7 @@ class Physics(object):
         ship.rect.center = (ship.x, ship.y)
 
 
-class GameMaster(object):
+class GameMaster:
     def __init__(self, entities):
         self.entities = entities
         self.world_width = 4000
@@ -153,7 +154,7 @@ class GameMaster(object):
         return player, enemies
 
 
-class ScreenPainter(object):
+class ScreenPainter:
     def __init__(self):
         self.world_width = 4000
         self.world_height = 4000
@@ -181,6 +182,22 @@ class ScreenPainter(object):
         screen.blit(text, text_rect)
 
 
+class HUD:
+    def __init__(self, camera):
+        self.hull_meter = HullMeter.create_for_hud(camera)
+        self.aiming_line = AimingLine.create_for_hud(camera)
+        self.offscreen_arrows = OffscreenArrows.create_for_hud(camera)
+
+    @classmethod
+    def create_for_gameloop(cls, camera):
+        return cls(camera)
+
+    def draw(self, screen, player, enemies):
+        self.hull_meter.draw(screen, player)
+        self.aiming_line.draw(screen, player)
+        self.offscreen_arrows.draw(screen, player, enemies)
+
+
 class HullMeter:
     def __init__(self, camera):
         self.camera = camera
@@ -195,7 +212,7 @@ class HullMeter:
 
     def draw(self, screen, player):
         player_coords = self.camera.get_ship_screen_coordinates(player)
-        hull_ratio = player.hullpoints / player.max_hullpoints
+        hull_ratio = player.hullpoints / player.ship_stats['max_hullpoints']
         hull_current_width = self.hull_width * hull_ratio
         hull_x = player_coords[0] - self.hull_width / 2
         hull_y = player_coords[1] + self.hull_offset_y
@@ -295,7 +312,7 @@ class OffscreenArrows:
 
     def _calculate_intersection_point(self, player_coords, nx, ny, t):
         intersect_x = player_coords[0] + nx * t
-        intersect_y = player_coords[1] + ny * t  # Fixed typo from previous version
+        intersect_y = player_coords[1] + ny * t
         intersect_x = max(self.arrow_margin, min(intersect_x, self.screen_width - self.arrow_margin))
         intersect_y = max(self.arrow_margin, min(intersect_y, self.screen_height - self.arrow_margin))
         return intersect_x, intersect_y
@@ -335,18 +352,3 @@ class OffscreenArrows:
 
             intersect_x, intersect_y = self._calculate_intersection_point(player_coords, nx, ny, t)
             self._draw_arrow(screen, intersect_x, intersect_y, nx, ny)
-
-class HUD:
-    def __init__(self, camera):
-        self.hull_meter = HullMeter.create_for_hud(camera)
-        self.aiming_line = AimingLine.create_for_hud(camera)
-        self.offscreen_arrows = OffscreenArrows.create_for_hud(camera)
-
-    @classmethod
-    def create_for_gameloop(cls, camera):
-        return cls(camera)
-
-    def draw(self, screen, player, enemies):
-        self.hull_meter.draw(screen, player)
-        self.aiming_line.draw(screen, player)
-        self.offscreen_arrows.draw(screen, player, enemies)
