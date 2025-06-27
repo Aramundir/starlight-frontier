@@ -272,7 +272,7 @@ class Cannon(ABC):
 class ScoutCannon(Cannon):
     @classmethod
     def create_for_ship(cls):
-        return cls(shoot_delay=600, projectile_speed=40.0)
+        return cls(shoot_delay=600, projectile_speed=30.0)
 
 
 class FighterCannon(Cannon):

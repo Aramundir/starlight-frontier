@@ -144,10 +144,10 @@ class GameMaster:
             enemies.append(enemy)
         return enemies
 
-    def setup_game(self, all_ships, projectiles, player_pos, num_enemies, difficulty):
+    def setup_game(self, all_ships, projectiles, player_pos, num_enemies, difficulty, player_ship_class='heavy_fighter'):
         all_ships.empty()
         projectiles.empty()
-        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', 'heavy_fighter')
+        player = self.entities.Ship.create(player_pos[0], player_pos[1], 'player', player_ship_class)
         all_ships.add(player)
         enemies = self.spawn_enemies(num_enemies, player_pos, difficulty)
         all_ships.add(enemies)
@@ -155,13 +155,16 @@ class GameMaster:
 
 
 class ScreenPainter:
-    def __init__(self):
+    def __init__(self, screen_width=1280, screen_height=720):
         self.world_width = 4000
         self.world_height = 4000
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.font = pygame.font.SysFont(None, 48)
 
     @classmethod
-    def create_for_gameloop(cls):
-        return cls()
+    def create_for_gameloop(cls, screen_width=1280, screen_height=720):
+        return cls(screen_width, screen_height)
 
     def create_a_star_surface(self):
         star_surface = pygame.Surface((self.world_width, self.world_height))
@@ -171,15 +174,49 @@ class ScreenPainter:
                                (random.randint(0, self.world_width), random.randint(0, self.world_height)), 1)
         return star_surface
 
+    def _render_transparent_text(self, text_str, center_pos, color):
+        rgb_color = color[:3] if len(color) == 4 else color
+        text_surface = self.font.render(text_str, True, rgb_color)
+        text_rect = text_surface.get_rect(center=center_pos)
+        transparent_surface = pygame.Surface(text_surface.get_size(), pygame.SRCALPHA)
+        transparent_surface.fill(rgb_color + (200,))  # Append alpha 200
+        transparent_surface.blit(text_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return transparent_surface, text_rect
+
     def display_end_screen(self, screen, status):
-        font = pygame.font.SysFont(None, 48)
         screen_text = {
-            'game_over': font.render("Game Over! - Press R to Restart", True, (190, 0, 0)),
-            'victory': font.render("Congratulations! - Press R to Advance", True, (190, 190, 0))
+            'game_over': ("Game Over! - Press R to Restart", (255, 0, 0)),
+            'victory': ("Congratulations! - Press R to Advance", (255, 255, 0))
         }
-        text = screen_text[status]
-        text_rect = text.get_rect(center=(640, 360))  # Center on 1280x720
-        screen.blit(text, text_rect)
+        text_str, color = screen_text[status]
+        text_surface, text_rect = self._render_transparent_text(text_str, (self.screen_width // 2, self.screen_height // 2), color)
+        end_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        end_surface.blit(text_surface, text_rect)
+        screen.blit(end_surface, (0, 0))
+
+    def display_menu(self, screen):
+        menu_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        texts = [
+            ("Select Ship Type:", (self.screen_width // 2, 200), (0, 255, 0)),
+            ("1. Scout", (self.screen_width // 2, 300), (0, 255, 0)),
+            ("2. Fighter", (self.screen_width // 2, 360), (0, 255, 0)),
+            ("3. Heavy Fighter", (self.screen_width // 2, 420), (0, 255, 0))
+        ]
+        for text_str, center_pos, color in texts:
+            text_surface, text_rect = self._render_transparent_text(text_str, center_pos, color)
+            menu_surface.blit(text_surface, text_rect)
+        screen.blit(menu_surface, (0, 0))
+
+    def display_pause(self, screen):
+        pause_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        text_surface, text_rect = self._render_transparent_text(
+            "Paused - Press Esc to Resume or R to Restart",
+            (self.screen_width // 2, self.screen_height // 2),
+            (255, 255, 255)
+        )
+        pause_surface.blit(text_surface, text_rect)
+        screen.blit(pause_surface, (0, 0))
+
 
 
 class HUD:
