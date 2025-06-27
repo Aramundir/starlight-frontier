@@ -1,5 +1,4 @@
 import pygame
-from pygame import SRCALPHA
 import entities
 import game_engine
 
