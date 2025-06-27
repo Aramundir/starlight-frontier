@@ -1,4 +1,6 @@
 import pygame
+from pygame import SRCALPHA
+
 import entities, game_engine
 
 pygame.init()
@@ -89,9 +91,9 @@ while running:
     for proj in projectiles:
         proj.rect.center = (proj.x - camera.x, proj.y - camera.y)
 
-    hud.draw(screen, player, enemies)
     all_ships.draw(screen)
     projectiles.draw(screen)
+    hud.draw(screen, player, enemies)
 
 
     for enemy in enemies[:]:
