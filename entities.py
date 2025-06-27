@@ -359,54 +359,40 @@ class AutoPilot:
     def create_for_ship(cls):
         return cls()
 
-    def navigate_to_target(self, ship, target_x, target_y):
-        distance = self._calculate_distance(ship, target_x, target_y)
-        if distance < self.tolerance:
-            ship.brake()
-            return distance, 0.0
-
-        target_angle = self._calculate_target_angle(ship, target_x, target_y)
-        angle_diff = self._calculate_angle_difference(ship.angle, target_angle)
-        alignment = self._calculate_alignment(angle_diff)
-        self._adjust_heading(ship, angle_diff)
-        self._navigate(ship, distance, angle_diff, alignment)
-        ship.angle = ship.angle % 360
-        return distance, alignment
-
-    def _calculate_distance(self, ship, target_x, target_y):
-        distance = math.sqrt((target_x - ship.x) ** 2 + (target_y - ship.y) ** 2)
-        return distance
-
-    def _calculate_target_angle(self, ship, target_x, target_y):
+    def navigate_to_target(self, ship, target_x, target_y, tolerance=200):
         delta_x = target_x - ship.x
         delta_y = target_y - ship.y
+        distance = math.sqrt(delta_x * delta_x + delta_y * delta_y)
+
+        if distance < tolerance:
+            ship.brake()
+
         target_angle = math.degrees(math.atan2(-delta_y, delta_x)) + 180
         if target_angle < 0:
             target_angle += 360
-        return target_angle
 
-    def _calculate_angle_difference(self, ship_angle, target_angle):
-        angle_diff = (target_angle - ship_angle + 180) % 360
-        return angle_diff
+        angle_diff = (target_angle - ship.angle + 180) % 360
 
-    def _calculate_alignment(self, angle_diff):
-        return abs(angle_diff) / 180
-
-    def _adjust_heading(self, ship, angle_diff):
         if angle_diff > 180:
             ship.turn('right')
-        elif angle_diff < 180:
+        if angle_diff < 180:
             ship.turn('left')
 
-    def _navigate(self, ship, distance, angle_diff, alignment):
-        if distance > self.tolerance:
+        ship.angle = ship.angle % 360
+
+        alignment = abs(angle_diff) / 180
+
+        if distance > tolerance:
             if alignment <= 0.5:
                 ship.accelerate('forward')
-            elif 45 < abs(angle_diff) < 135:
-                if angle_diff > 100:
-                    ship.accelerate_lateral('right')
-                elif angle_diff < 100:
-                    ship.accelerate_lateral('left')
+            if alignment > 0.5:
+                if 45 < abs(angle_diff) < 135:
+                    if angle_diff > 100:
+                        ship.accelerate_lateral('right')
+                    if angle_diff < 100:
+                        ship.accelerate_lateral('left')
+
+        return distance, alignment
 
 
 class Projectile(pygame.sprite.Sprite):
