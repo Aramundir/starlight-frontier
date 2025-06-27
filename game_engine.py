@@ -181,9 +181,6 @@ class ScreenPainter(object):
         screen.blit(text, text_rect)
 
 
-import pygame
-import math
-
 class HullMeter:
     def __init__(self, camera):
         self.camera = camera
@@ -208,6 +205,7 @@ class HullMeter:
         pygame.draw.rect(base_surface, (100, 100, 100),
                          (0, 0, self.hull_width, self.hull_height), 1)
         screen.blit(base_surface, (hull_x, hull_y))
+
 
 class AimingLine:
     def __init__(self, camera):
@@ -247,6 +245,7 @@ class AimingLine:
                              self.aiming_line_thickness)
 
         screen.blit(line_surface, (0, 0))
+
 
 class OffscreenArrows:
     def __init__(self, camera):
