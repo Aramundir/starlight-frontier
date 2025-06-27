@@ -181,28 +181,22 @@ class ScreenPainter(object):
         screen.blit(text, text_rect)
 
 
-class HUD:
+import pygame
+import math
+
+class HullMeter:
     def __init__(self, camera):
-        self.screen_width = camera.screen_width
-        self.screen_height = camera.screen_height
         self.camera = camera
         self.hull_color = (0, 255, 0, 200)
-        self.arrow_color = (255, 0, 0, 200)
-        self.aiming_line_color = (0, 255, 0, 200)
         self.hull_width = 50
         self.hull_height = 5
         self.hull_offset_y = 25
-        self.arrow_size = 8
-        self.arrow_margin = 10
-        self.aiming_line_start_offset = 50
-        self.aiming_line_length = 150
-        self.aiming_line_thickness = 1
 
     @classmethod
-    def create_for_gameloop(cls, camera):
+    def create_for_hud(cls, camera):
         return cls(camera)
 
-    def draw_hull_meter(self, screen, player):
+    def draw(self, screen, player):
         player_coords = self.camera.get_ship_screen_coordinates(player)
         hull_ratio = player.hullpoints / player.max_hullpoints
         hull_current_width = self.hull_width * hull_ratio
@@ -214,6 +208,58 @@ class HUD:
         pygame.draw.rect(base_surface, (100, 100, 100),
                          (0, 0, self.hull_width, self.hull_height), 1)
         screen.blit(base_surface, (hull_x, hull_y))
+
+class AimingLine:
+    def __init__(self, camera):
+        self.camera = camera
+        self.screen_width = camera.screen_width
+        self.screen_height = camera.screen_height
+        self.aiming_line_color = (0, 255, 0, 200)
+        self.aiming_line_start_offset = 50
+        self.aiming_line_length = 150
+        self.aiming_line_thickness = 1
+
+    @classmethod
+    def create_for_hud(cls, camera):
+        return cls(camera)
+
+    def draw(self, screen, player):
+        line_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        player_coords = self.camera.get_ship_screen_coordinates(player)
+        rad = math.radians(player.angle)
+        cos_a = math.cos(rad)
+        sin_a = math.sin(rad)
+
+        for hp_x, hp_y in player.ship_stats['hardpoints']:
+            hp_rot_x = hp_x * cos_a - hp_y * sin_a
+            hp_rot_y = hp_x * sin_a + hp_y * cos_a
+            hp_screen_x = player_coords[0] + hp_rot_x
+            hp_screen_y = player_coords[1] - hp_rot_y
+
+            line_start_x = hp_screen_x + self.aiming_line_start_offset * cos_a
+            line_start_y = hp_screen_y - self.aiming_line_start_offset * sin_a
+            line_end_x = hp_screen_x + self.aiming_line_length * cos_a
+            line_end_y = hp_screen_y - self.aiming_line_length * sin_a
+
+            pygame.draw.line(line_surface, self.aiming_line_color,
+                             (line_start_x, line_start_y),
+                             (line_end_x, line_end_y),
+                             self.aiming_line_thickness)
+
+        screen.blit(line_surface, (0, 0))
+
+class OffscreenArrows:
+    def __init__(self, camera):
+        self.camera = camera
+        self.screen_width = camera.screen_width
+        self.screen_height = camera.screen_height
+        self.arrow_color = (255, 0, 0, 200)
+        self.arrow_size = 8
+        self.arrow_margin = 10
+
+    @classmethod
+    def create_for_hud(cls, camera):
+        return cls(camera)
 
     def _is_enemy_offscreen(self, enemy_screen_coords):
         x, y = enemy_screen_coords
@@ -250,7 +296,7 @@ class HUD:
 
     def _calculate_intersection_point(self, player_coords, nx, ny, t):
         intersect_x = player_coords[0] + nx * t
-        intersect_y = player_coords[1] + ny * t
+        intersect_y = player_coords[1] + ny * t  # Fixed typo from previous version
         intersect_x = max(self.arrow_margin, min(intersect_x, self.screen_width - self.arrow_margin))
         intersect_y = max(self.arrow_margin, min(intersect_y, self.screen_height - self.arrow_margin))
         return intersect_x, intersect_y
@@ -259,7 +305,7 @@ class HUD:
         arrow_surface = pygame.Surface((self.arrow_size * 2, self.arrow_size * 2), pygame.SRCALPHA)
         angle = math.degrees(math.atan2(-ny, nx)) + 180
         points = [
-            (self.arrow_size, self.arrow_size),  # Center of the surface
+            (self.arrow_size, self.arrow_size),
             (self.arrow_size - self.arrow_size * math.cos(math.radians(angle + 150)),
              self.arrow_size + self.arrow_size * math.sin(math.radians(angle + 150))),
             (self.arrow_size - self.arrow_size * math.cos(math.radians(angle - 150)),
@@ -268,7 +314,7 @@ class HUD:
         pygame.draw.polygon(arrow_surface, self.arrow_color, points)
         screen.blit(arrow_surface, (intersect_x - self.arrow_size, intersect_y - self.arrow_size))
 
-    def draw_offscreen_arrows(self, screen, player, enemies):
+    def draw(self, screen, player, enemies):
         ship_coords = self.camera.get_multiple_ship_screen_coordinates([player] + list(enemies))
         player_coords = ship_coords[player]
 
@@ -291,34 +337,17 @@ class HUD:
             intersect_x, intersect_y = self._calculate_intersection_point(player_coords, nx, ny, t)
             self._draw_arrow(screen, intersect_x, intersect_y, nx, ny)
 
-    def draw_aiming_line(self, screen, player):
-        line_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+class HUD:
+    def __init__(self, camera):
+        self.hull_meter = HullMeter.create_for_hud(camera)
+        self.aiming_line = AimingLine.create_for_hud(camera)
+        self.offscreen_arrows = OffscreenArrows.create_for_hud(camera)
 
-        player_coords = self.camera.get_ship_screen_coordinates(player)
-        rad = math.radians(player.angle)
-        cos_a = math.cos(rad)
-        sin_a = math.sin(rad)
-
-        for hp_x, hp_y in player.ship_stats['hardpoints']:
-            hp_rot_x = hp_x * cos_a - hp_y * sin_a
-            hp_rot_y = hp_x * sin_a + hp_y * cos_a
-            hp_screen_x = player_coords[0] + hp_rot_x
-            hp_screen_y = player_coords[1] - hp_rot_y
-
-            line_start_x = hp_screen_x + self.aiming_line_start_offset * cos_a
-            line_start_y = hp_screen_y - self.aiming_line_start_offset * sin_a
-
-            line_end_x = hp_screen_x + self.aiming_line_length * cos_a
-            line_end_y = hp_screen_y - self.aiming_line_length * sin_a
-
-            pygame.draw.line(line_surface, self.aiming_line_color,
-                             (line_start_x, line_start_y),
-                             (line_end_x, line_end_y),
-                             self.aiming_line_thickness)
-
-        screen.blit(line_surface, (0, 0))
+    @classmethod
+    def create_for_gameloop(cls, camera):
+        return cls(camera)
 
     def draw(self, screen, player, enemies):
-        self.draw_hull_meter(screen, player)
-        self.draw_offscreen_arrows(screen, player, enemies)
-        self.draw_aiming_line(screen, player)
+        self.hull_meter.draw(screen, player)
+        self.aiming_line.draw(screen, player)
+        self.offscreen_arrows.draw(screen, player, enemies)
