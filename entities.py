@@ -47,6 +47,7 @@ class Ship(pygame.sprite.Sprite):
         self.angle = 0
         self.x_vector = 0
         self.y_vector = 0
+        self.angular_velocity = 0.0  # New: rotational speed (degrees per frame)
         self.faction = faction
         self.color = self._get_color()
         self.main_thrusters = None
@@ -101,15 +102,20 @@ class Ship(pygame.sprite.Sprite):
     def brake(self):
         self.maneuvering_thrusters.brake(self, self.get_total_mass())
 
+    def brake_rotation(self):
+        self.maneuvering_thrusters.brake_rotation(self, self.get_total_mass())
+
     def turn(self, direction):
-        self.maneuvering_thrusters.turn(self, direction)
+        self.maneuvering_thrusters.turn(self, direction, self.get_total_mass())
 
     def move(self):
         self.x += self.x_vector
         self.y += self.y_vector
+        self.angle += self.angular_velocity
+        self.angle %= 360
 
     def approach_target(self, target_x, target_y, tolerance=200):
-        return self.auto_pilot.navigate_to_target(self, target_x, target_y)
+        return self.auto_pilot.navigate_to_target(self, target_x, target_y, tolerance)
 
     def fire(self):
         return self.cannon.fire(self)
@@ -218,11 +224,21 @@ class ManeuveringThrusters(ABC):
             ship.x_vector *= scale
             ship.y_vector *= scale
 
-    def turn(self, ship, direction):
+    def turn(self, ship, direction, total_mass):
+        resistance_factor = 1.0 / (1.0 + total_mass)
+        angular_acceleration = self.turn_rate * resistance_factor * 0.1
         if direction == 'left':
-            ship.angle += self.turn_rate
+            ship.angular_velocity = min(ship.angular_velocity + angular_acceleration, self.turn_rate)
         if direction == 'right':
-            ship.angle -= self.turn_rate
+            ship.angular_velocity = max(ship.angular_velocity - angular_acceleration, -self.turn_rate)
+
+    def brake_rotation(self, ship, total_mass):
+        resistance_factor = 1.0 / (1.0 + total_mass)
+        angular_deceleration = self.turn_rate * resistance_factor * 0.1
+        if ship.angular_velocity > 0:
+            ship.angular_velocity = max(ship.angular_velocity - angular_deceleration, 0)
+        if ship.angular_velocity < 0:
+            ship.angular_velocity = min(ship.angular_velocity + angular_deceleration, 0)
 
     def brake(self, ship, total_mass):
         speed = math.sqrt(ship.x_vector ** 2 + ship.y_vector ** 2)

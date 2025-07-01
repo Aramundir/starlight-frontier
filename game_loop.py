@@ -128,6 +128,8 @@ class Game:
             self.player.turn('right')
         if keys[pygame.K_x]:
             self.player.brake()
+        if keys[pygame.K_z]:
+            self.player.brake_rotation()
         if keys[pygame.K_SPACE]:
             projs = self.player.fire()
             for proj in projs:
