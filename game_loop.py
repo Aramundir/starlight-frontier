@@ -3,7 +3,7 @@ import entities
 import game_engine
 
 class Game:
-    def __init__(self, screen_width=1280, screen_height=720):
+    def __init__(self, screen_width=1600, screen_height=900):
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -27,7 +27,7 @@ class Game:
 
     def start_game(self, ship_class):
         self.player, self.enemies = self.game_master.setup_game(
-            self.all_ships, self.projectiles, (2000, 2000), 5, self.difficulty, ship_class
+            self.all_ships, self.projectiles, (4000, 4000), 5, self.difficulty, ship_class
         )
         self.camera = game_engine.Camera.create_for_gameloop(self.screen_width, self.screen_height, self.player)
         self.hud = game_engine.HUD.create_for_gameloop(self.camera)
@@ -67,7 +67,7 @@ class Game:
                     self.game_state = 'playing'
 
         self.screen.fill((0, 0, 0))
-        self.screen.blit(self.star_surface, (-640, -360))  # Center starfield on 1280x720
+        self.screen.blit(self.star_surface, (-640, -360))
         self.screen_painter.display_menu(self.screen)
 
     def _handle_paused(self, events):
@@ -139,7 +139,7 @@ class Game:
         self.game_physics.check_for_ship_collision(self.all_ships)
         self.game_physics.check_for_projectile_collisions(self.projectiles, self.all_ships)
 
-        self.camera.update(4000, 4000)
+        self.camera.update(8000, 8000)
 
         self.screen.fill((0, 0, 0))
         self.screen.blit(self.star_surface, (-self.camera.x, -self.camera.y))

@@ -32,8 +32,8 @@ class Camera:
 
 class Physics:
     def __init__(self):
-        self.world_width = 4000
-        self.world_height = 4000
+        self.world_width = 8000
+        self.world_height = 8000
 
     @classmethod
     def create_for_gameloop(cls):
@@ -116,8 +116,8 @@ class Physics:
 class GameMaster:
     def __init__(self, entities):
         self.entities = entities
-        self.world_width = 4000
-        self.world_height = 4000
+        self.world_width = 8000
+        self.world_height = 8000
 
     @classmethod
     def create_for_gameloop(cls, entities):
@@ -155,9 +155,9 @@ class GameMaster:
 
 
 class ScreenPainter:
-    def __init__(self, screen_width=1280, screen_height=720):
-        self.world_width = 4000
-        self.world_height = 4000
+    def __init__(self, screen_width=1600, screen_height=900):
+        self.world_width = 8000
+        self.world_height = 8000
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.font = pygame.font.SysFont(None, 48)
@@ -169,7 +169,7 @@ class ScreenPainter:
     def create_a_star_surface(self):
         star_surface = pygame.Surface((self.world_width, self.world_height))
         star_surface.fill((0, 0, 0))
-        for star in range(1500):
+        for star in range(5000):
             pygame.draw.circle(star_surface, (255, 255, 255),
                                (random.randint(0, self.world_width), random.randint(0, self.world_height)), 1)
         return star_surface
@@ -179,7 +179,7 @@ class ScreenPainter:
         text_surface = self.font.render(text_str, True, rgb_color)
         text_rect = text_surface.get_rect(center=center_pos)
         transparent_surface = pygame.Surface(text_surface.get_size(), pygame.SRCALPHA)
-        transparent_surface.fill(rgb_color + (200,))  # Append alpha 200
+        transparent_surface.fill(rgb_color + (200,))
         transparent_surface.blit(text_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return transparent_surface, text_rect
 
