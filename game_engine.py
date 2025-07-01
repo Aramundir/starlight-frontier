@@ -31,13 +31,13 @@ class Camera:
 
 
 class Physics:
-    def __init__(self):
-        self.world_width = 8000
-        self.world_height = 8000
+    def __init__(self, world_width, world_height):
+        self.world_width = world_width
+        self.world_height = world_height
 
     @classmethod
-    def create_for_gameloop(cls):
-        return cls()
+    def create_for_gameloop(cls, world_width, world_height):
+        return cls(world_width, world_height)
 
     def check_for_ship_collision(self, all_ships):
         for ship1 in all_ships:
@@ -114,14 +114,14 @@ class Physics:
 
 
 class GameMaster:
-    def __init__(self, entities):
+    def __init__(self, entities, world_width, world_height):
         self.entities = entities
-        self.world_width = 8000
-        self.world_height = 8000
+        self.world_width = world_width
+        self.world_height = world_height
 
     @classmethod
-    def create_for_gameloop(cls, entities):
-        return cls(entities)
+    def create_for_gameloop(cls, entities, world_width, world_height):
+        return cls(entities, world_width, world_height)
 
     def spawn_enemies(self, num_enemies, player_pos, difficulty, min_distance=300):
         enemies = []
@@ -155,21 +155,21 @@ class GameMaster:
 
 
 class ScreenPainter:
-    def __init__(self, screen_width=1600, screen_height=900):
-        self.world_width = 8000
-        self.world_height = 8000
+    def __init__(self, screen_width, screen_height, world_width, world_height):
+        self.world_width = world_width
+        self.world_height = world_height
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.font = pygame.font.SysFont(None, 48)
 
     @classmethod
-    def create_for_gameloop(cls, screen_width=1280, screen_height=720):
-        return cls(screen_width, screen_height)
+    def create_for_gameloop(cls, screen_width, screen_height, world_width, world_height):
+        return cls(screen_width, screen_height, world_width, world_height)
 
     def create_a_star_surface(self):
         star_surface = pygame.Surface((self.world_width, self.world_height))
         star_surface.fill((0, 0, 0))
-        for star in range(5000):
+        for star in range(8000):
             pygame.draw.circle(star_surface, (255, 255, 255),
                                (random.randint(0, self.world_width), random.randint(0, self.world_height)), 1)
         return star_surface
@@ -197,10 +197,10 @@ class ScreenPainter:
     def display_menu(self, screen):
         menu_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         texts = [
-            ("Select Ship Type:", (self.screen_width // 2, 200), (0, 255, 0)),
-            ("1. Scout", (self.screen_width // 2, 300), (0, 255, 0)),
-            ("2. Fighter", (self.screen_width // 2, 360), (0, 255, 0)),
-            ("3. Heavy Fighter", (self.screen_width // 2, 420), (0, 255, 0))
+            ("Select Ship Type:", (self.screen_width // 2, 300), (0, 255, 0)),
+            ("1. Scout", (self.screen_width // 2, 360), (0, 255, 0)),
+            ("2. Fighter", (self.screen_width // 2, 420), (0, 255, 0)),
+            ("3. Heavy Fighter", (self.screen_width // 2, 480), (0, 255, 0))
         ]
         for text_str, center_pos, color in texts:
             text_surface, text_rect = self._render_transparent_text(text_str, center_pos, color)
@@ -216,7 +216,6 @@ class ScreenPainter:
         )
         pause_surface.blit(text_surface, text_rect)
         screen.blit(pause_surface, (0, 0))
-
 
 
 class HUD:

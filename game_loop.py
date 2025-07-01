@@ -3,17 +3,19 @@ import entities
 import game_engine
 
 class Game:
-    def __init__(self, screen_width=1600, screen_height=900):
+    def __init__(self, screen_width=1600, screen_height=900, world_width=8000, world_height=8000):  # Added world size definitions
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.screen = pygame.display.set_mode((screen_width, screen_height))
+        self.world_width = world_width
+        self.world_height = world_height
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         pygame.display.set_caption("Starlight Frontier")
         self.clock = pygame.time.Clock()
 
-        self.game_physics = game_engine.Physics.create_for_gameloop()
-        self.game_master = game_engine.GameMaster.create_for_gameloop(entities)
-        self.screen_painter = game_engine.ScreenPainter.create_for_gameloop(self.screen_width, self.screen_height)
+        self.game_physics = game_engine.Physics.create_for_gameloop(self.world_width, self.world_height)
+        self.game_master = game_engine.GameMaster.create_for_gameloop(entities, self.world_width, self.world_height)
+        self.screen_painter = game_engine.ScreenPainter.create_for_gameloop(self.screen_width, self.screen_height, self.world_width, self.world_height)
         self.star_surface = self.screen_painter.create_a_star_surface()
 
         self.game_state = 'menu'
@@ -27,7 +29,7 @@ class Game:
 
     def start_game(self, ship_class):
         self.player, self.enemies = self.game_master.setup_game(
-            self.all_ships, self.projectiles, (4000, 4000), 5, self.difficulty, ship_class
+            self.all_ships, self.projectiles, (self.world_width // 2, self.world_height // 2), 5, self.difficulty, ship_class
         )
         self.camera = game_engine.Camera.create_for_gameloop(self.screen_width, self.screen_height, self.player)
         self.hud = game_engine.HUD.create_for_gameloop(self.camera)
@@ -67,7 +69,7 @@ class Game:
                     self.game_state = 'playing'
 
         self.screen.fill((0, 0, 0))
-        self.screen.blit(self.star_surface, (-640, -360))
+        self.screen.blit(self.star_surface, (-self.screen_width // 2, -self.screen_height // 2))
         self.screen_painter.display_menu(self.screen)
 
     def _handle_paused(self, events):
@@ -141,7 +143,7 @@ class Game:
         self.game_physics.check_for_ship_collision(self.all_ships)
         self.game_physics.check_for_projectile_collisions(self.projectiles, self.all_ships)
 
-        self.camera.update(8000, 8000)
+        self.camera.update(self.world_width, self.world_height)
 
         self.screen.fill((0, 0, 0))
         self.screen.blit(self.star_surface, (-self.camera.x, -self.camera.y))
@@ -151,17 +153,17 @@ class Game:
             proj.rect.center = (proj.x - self.camera.x, proj.y - self.camera.y)
         self.all_ships.draw(self.screen)
         self.projectiles.draw(self.screen)
-        self.hud.draw(self.screen, self.player, self.enemies)
+        self.hud.draw (self.screen, self.player, self.enemies)
 
         for enemy in self.enemies[:]:
             if not enemy.alive():
                 self.enemies.remove(enemy)
                 continue
             distance, alignment = enemy.approach_target(self.player.x, self.player.y)
-            if distance < 500 and alignment <= 0.2:
-                projs = enemy.fire()
-                for proj in projs:
-                    self.projectiles.add(proj)
+            # if distance < 500 and alignment <= 0.2:
+            #     projs = enemy.fire()
+            #     for proj in projs:
+            #         self.projectiles.add(proj)
 
 
 if __name__ == '__main__':
