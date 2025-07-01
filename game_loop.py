@@ -115,21 +115,21 @@ class Game:
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
-            self.player.accelerate('forward')
+            self.player.start_to_accelerate('forward')
         if keys[pygame.K_s]:
-            self.player.accelerate('backward')
+            self.player.start_to_accelerate('backward')
         if keys[pygame.K_q]:
-            self.player.accelerate_lateral('left')
+            self.player.start_to_accelerate('left')
         if keys[pygame.K_e]:
-            self.player.accelerate_lateral('right')
+            self.player.start_to_accelerate('right')
         if keys[pygame.K_a]:
-            self.player.turn('left')
+            self.player.start_to_turn('left')
         if keys[pygame.K_d]:
-            self.player.turn('right')
+            self.player.start_to_turn('right')
         if keys[pygame.K_x]:
-            self.player.brake()
+            self.player.start_to_brake()
         if keys[pygame.K_z]:
-            self.player.brake_rotation()
+            self.player.start_to_brake_rotation()
         if keys[pygame.K_SPACE]:
             projs = self.player.fire()
             for proj in projs:

@@ -47,7 +47,7 @@ class Ship(pygame.sprite.Sprite):
         self.angle = 0
         self.x_vector = 0
         self.y_vector = 0
-        self.angular_velocity = 0.0  # New: rotational speed (degrees per frame)
+        self.angular_velocity = 0.0
         self.faction = faction
         self.color = self._get_color()
         self.main_thrusters = None
@@ -84,7 +84,7 @@ class Ship(pygame.sprite.Sprite):
         return ShipFactory.create_ship(x, y, faction, ship_class)
 
     def get_total_mass(self):
-        total_mass = self.hull.max_hullpoints
+        total_mass = self.hull.mass
         if self.main_thrusters:
             total_mass += self.main_thrusters.mass
         if self.maneuvering_thrusters:
@@ -93,19 +93,19 @@ class Ship(pygame.sprite.Sprite):
             total_mass += self.cannon.mass
         return total_mass
 
-    def accelerate(self, direction):
-        self.main_thrusters.accelerate(self, direction, self.get_total_mass())
+    def start_to_accelerate(self, direction):
+        if direction == 'forward':
+            self.main_thrusters.accelerate(self, self.get_total_mass())
+            return
+        self.maneuvering_thrusters.accelerate(self, direction, self.get_total_mass())
 
-    def accelerate_lateral(self, direction):
-        self.maneuvering_thrusters.accelerate_lateral(self, direction, self.get_total_mass())
-
-    def brake(self):
+    def start_to_brake(self):
         self.maneuvering_thrusters.brake(self, self.get_total_mass())
 
-    def brake_rotation(self):
+    def start_to_brake_rotation(self):
         self.maneuvering_thrusters.brake_rotation(self, self.get_total_mass())
 
-    def turn(self, direction):
+    def start_to_turn(self, direction):
         self.maneuvering_thrusters.turn(self, direction, self.get_total_mass())
 
     def move(self):
@@ -155,18 +155,12 @@ class MainThrusters(ABC):
     def create_for_ship(cls):
         pass
 
-    def accelerate(self, ship, direction, total_mass):
-        ax = math.cos(math.radians(ship.angle)) * self.forward_thrust
-        ay = -math.sin(math.radians(ship.angle)) * self.forward_thrust
-        resistance_factor = 1.0 / (1.0 + total_mass)
-        ax *= resistance_factor
-        ay *= resistance_factor
-        if direction == 'forward':
-            ship.x_vector += ax
-            ship.y_vector += ay
-        if direction == 'backward':
-            ship.x_vector -= ax
-            ship.y_vector -= ay
+    def accelerate(self, ship, total_mass):
+        acceleration = self.forward_thrust / total_mass
+        ax = math.cos(math.radians(ship.angle)) * acceleration
+        ay = -math.sin(math.radians(ship.angle)) * acceleration
+        ship.x_vector += ax
+        ship.y_vector += ay
         self._clamp_speed(ship)
 
     def _clamp_speed(self, ship):
@@ -196,9 +190,9 @@ class HeavyFighterMainThrusters(MainThrusters):
 
 
 class ManeuveringThrusters(ABC):
-    def __init__(self, side_thrust, turn_rate, mass):
+    def __init__(self, side_thrust, torque, mass):
         self.side_thrust = side_thrust
-        self.turn_rate = turn_rate
+        self.torque = torque
         self.mass = mass
 
     @classmethod
@@ -206,39 +200,40 @@ class ManeuveringThrusters(ABC):
     def create_for_ship(cls):
         pass
 
-    def accelerate_lateral(self, ship, direction, total_mass):
-        ax = -math.sin(math.radians(ship.angle)) * self.side_thrust
-        ay = -math.cos(math.radians(ship.angle)) * self.side_thrust
-        resistance_factor = 1.0 / (1.0 + total_mass)
-        ax *= resistance_factor
-        ay *= resistance_factor
-        if direction == 'left':
-            ship.x_vector += ax
-            ship.y_vector += ay
-        if direction == 'right':
-            ship.x_vector -= ax
-            ship.y_vector -= ay
+    def accelerate(self, ship, direction, total_mass):
+        direction_vectors = {
+            'left': (-math.sin(math.radians(ship.angle)), -math.cos(math.radians(ship.angle))),
+            'right': (math.sin(math.radians(ship.angle)), math.cos(math.radians(ship.angle))),
+            'backward': (-math.cos(math.radians(ship.angle)), math.sin(math.radians(ship.angle)))
+        }
+        if direction not in direction_vectors:
+            return
+        ax, ay = direction_vectors[direction]
+        acceleration = self.side_thrust / total_mass
+        ship.x_vector += ax * acceleration
+        ship.y_vector += ay * acceleration
         speed = math.sqrt(ship.x_vector ** 2 + ship.y_vector ** 2)
-        if speed > ship.main_thrusters.max_speed:
-            scale = ship.main_thrusters.max_speed / speed
-            ship.x_vector *= scale
-            ship.y_vector *= scale
+        if speed <= ship.main_thrusters.max_speed:
+            return
+        scale = ship.main_thrusters.max_speed / speed
+        ship.x_vector *= scale
+        ship.y_vector *= scale
 
     def turn(self, ship, direction, total_mass):
-        resistance_factor = 1.0 / (1.0 + total_mass)
-        angular_acceleration = self.turn_rate * resistance_factor * 0.1
+        angular_acceleration = (self.torque / total_mass) / 10
         if direction == 'left':
-            ship.angular_velocity = min(ship.angular_velocity + angular_acceleration, self.turn_rate)
+            ship.angular_velocity += angular_acceleration
         if direction == 'right':
-            ship.angular_velocity = max(ship.angular_velocity - angular_acceleration, -self.turn_rate)
+            ship.angular_velocity -= angular_acceleration
+        max_angular_velocity = self.torque * 2
+        ship.angular_velocity = max(min(ship.angular_velocity, max_angular_velocity), -max_angular_velocity)
 
     def brake_rotation(self, ship, total_mass):
-        resistance_factor = 1.0 / (1.0 + total_mass)
-        angular_deceleration = self.turn_rate * resistance_factor * 0.1
+        angular_acceleration = (self.torque / total_mass) / 10
         if ship.angular_velocity > 0:
-            ship.angular_velocity = max(ship.angular_velocity - angular_deceleration, 0)
+            ship.angular_velocity = max(ship.angular_velocity - angular_acceleration, 0)
         if ship.angular_velocity < 0:
-            ship.angular_velocity = min(ship.angular_velocity + angular_deceleration, 0)
+            ship.angular_velocity = min(ship.angular_velocity + angular_acceleration, 0)
 
     def brake(self, ship, total_mass):
         speed = math.sqrt(ship.x_vector ** 2 + ship.y_vector ** 2)
@@ -255,19 +250,19 @@ class ManeuveringThrusters(ABC):
 class ScoutManeuveringThrusters(ManeuveringThrusters):
     @classmethod
     def create_for_ship(cls):
-        return cls(side_thrust=0.1, turn_rate=2.0, mass=1.0)
+        return cls(side_thrust=0.1, torque=2.0, mass=1.0)
 
 
 class FighterManeuveringThrusters(ManeuveringThrusters):
     @classmethod
     def create_for_ship(cls):
-        return cls(side_thrust=0.3, turn_rate=6.0, mass=2.0)
+        return cls(side_thrust=0.3, torque=6.0, mass=2.0)
 
 
 class HeavyFighterManeuveringThrusters(ManeuveringThrusters):
     @classmethod
     def create_for_ship(cls):
-        return cls(side_thrust=0.2, turn_rate=3.0, mass=3.0)
+        return cls(side_thrust=0.2, torque=3.0, mass=3.0)
 
 
 class Cannon(ABC):
@@ -325,9 +320,10 @@ class HeavyFighterCannon(Cannon):
 
 
 class Hull(ABC):
-    def __init__(self, hullpoints, hardpoints, shape, size):
+    def __init__(self, hullpoints, mass, hardpoints, shape, size):
         self._hullpoints = hullpoints
         self.max_hullpoints = hullpoints
+        self.mass = mass
         self.hardpoints = hardpoints
         self.shape = shape
         self.size = size
@@ -357,28 +353,29 @@ class ScoutHull(Hull):
     def create_for_ship(cls):
         return cls(
             hullpoints=2,
+            mass=2.0,
             hardpoints=[(11, 0)],
             shape=[(10, 0), (-10, -9), (-10, 9)],
             size='small'
         )
-
 
 class FighterHull(Hull):
     @classmethod
     def create_for_ship(cls):
         return cls(
             hullpoints=4,
+            mass=4.0,
             hardpoints=[(-10, 10), (-10, -10)],
             shape=[(20, 0), (-10, -9), (-10, 9)],
             size='small'
         )
-
 
 class HeavyFighterHull(Hull):
     @classmethod
     def create_for_ship(cls):
         return cls(
             hullpoints=6,
+            mass=6.0,
             hardpoints=[(11, 0), (-10, 19), (-10, -19)],
             shape=[(10, 0), (-10, 18), (-10, -18)],
             size='small'
@@ -397,7 +394,7 @@ class AutoPilot:
         distance = math.sqrt(delta_x * delta_x + delta_y * delta_y)
 
         if distance < tolerance:
-            ship.brake()
+            ship.start_to_brake()
 
         target_angle = math.degrees(math.atan2(-delta_y, delta_x)) + 180
         if target_angle < 0:
@@ -406,9 +403,9 @@ class AutoPilot:
         angle_diff = (target_angle - ship.angle + 180) % 360
 
         if angle_diff > 180:
-            ship.turn('right')
+            ship.start_to_turn('right')
         if angle_diff < 180:
-            ship.turn('left')
+            ship.start_to_turn('left')
 
         ship.angle = ship.angle % 360
 
@@ -416,13 +413,13 @@ class AutoPilot:
 
         if distance > tolerance:
             if alignment <= 0.5:
-                ship.accelerate('forward')
+                ship.start_to_accelerate('forward')
             if alignment > 0.5:
                 if 45 < abs(angle_diff) < 135:
                     if angle_diff > 100:
-                        ship.accelerate_lateral('right')
+                        ship.start_to_accelerate('right')
                     if angle_diff < 100:
-                        ship.accelerate_lateral('left')
+                        ship.start_to_accelerate('left')
 
         return distance, alignment
 
