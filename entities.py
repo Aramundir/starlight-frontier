@@ -388,38 +388,64 @@ class AutoPilot:
     def create_for_ship(cls):
         return cls()
 
-    def navigate_to_target(self, ship, target_x, target_y, tolerance=200):
+    def calculate_deltas(self, ship, target_x, target_y):
         delta_x = target_x - ship.x
         delta_y = target_y - ship.y
         distance = math.sqrt(delta_x * delta_x + delta_y * delta_y)
-
-        if distance < tolerance:
-            ship.start_to_brake()
-
         target_angle = math.degrees(math.atan2(-delta_y, delta_x)) + 180
         if target_angle < 0:
             target_angle += 360
-
         angle_diff = (target_angle - ship.angle + 180) % 360
+        return distance, angle_diff
 
+    def should_brake(self, ship, distance, tolerance):
+        acceleration = ship.maneuvering_thrusters.side_thrust / ship.ship_stats['total_mass']
+        speed = math.sqrt(ship.x_vector ** 2 + ship.y_vector ** 2)
+
+        if speed == 0:
+            return distance < tolerance
+
+        time_to_target = (distance - tolerance) / speed
+        time_to_stop = speed / acceleration
+
+        return time_to_target <= time_to_stop
+
+    def should_brake_rotation(self, ship, angle_diff):
+        angular_acceleration = (ship.maneuvering_thrusters.torque / ship.ship_stats['total_mass']) / 10
+        current_vel = abs(ship.angular_velocity)
+
+        if current_vel == 0:
+            return abs(angle_diff) < 2
+
+        time_to_target = abs(angle_diff) / current_vel
+        time_to_stop = current_vel / angular_acceleration
+
+        return time_to_target <= time_to_stop
+
+    def navigate_to_target(self, ship, target_x, target_y, tolerance=200):
+
+        distance, angle_diff = self.calculate_deltas(ship, target_x, target_y)
+
+        if self.should_brake_rotation(ship, angle_diff):
+            ship.start_to_brake_rotation()
+
+        if self.should_brake(ship, distance, tolerance):
+            ship.start_to_brake()
+
+        angle_diff_short = min(angle_diff, 360 - angle_diff)
+        alignment = angle_diff_short / 180
         if angle_diff > 180:
+            if alignment > 0.5:
+                ship.start_to_accelerate('left')
             ship.start_to_turn('right')
         if angle_diff < 180:
+            if alignment > 0.5:
+                ship.start_to_accelerate('right')
             ship.start_to_turn('left')
-
-        ship.angle = ship.angle % 360
-
-        alignment = abs(angle_diff) / 180
 
         if distance > tolerance:
             if alignment <= 0.5:
                 ship.start_to_accelerate('forward')
-            if alignment > 0.5:
-                if 45 < abs(angle_diff) < 135:
-                    if angle_diff > 100:
-                        ship.start_to_accelerate('right')
-                    if angle_diff < 100:
-                        ship.start_to_accelerate('left')
 
         return distance, alignment
 
