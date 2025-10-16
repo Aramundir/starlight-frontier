@@ -422,6 +422,16 @@ class AutoPilot:
 
         return time_to_target <= time_to_stop
 
+    def turn_and_strafe(self, ship, angle_diff, alignment):
+        if angle_diff > 180:
+            if alignment > 0.5:
+                ship.start_to_accelerate('left')
+            ship.start_to_turn('right')
+        if angle_diff < 180:
+            if alignment > 0.5:
+                ship.start_to_accelerate('right')
+            ship.start_to_turn('left')
+
     def navigate_to_target(self, ship, target_x, target_y, tolerance=200):
 
         distance, angle_diff = self.calculate_deltas(ship, target_x, target_y)
@@ -434,14 +444,8 @@ class AutoPilot:
 
         angle_diff_short = min(angle_diff, 360 - angle_diff)
         alignment = angle_diff_short / 180
-        if angle_diff > 180:
-            if alignment > 0.5:
-                ship.start_to_accelerate('left')
-            ship.start_to_turn('right')
-        if angle_diff < 180:
-            if alignment > 0.5:
-                ship.start_to_accelerate('right')
-            ship.start_to_turn('left')
+
+        self.turn_and_strafe(ship, angle_diff, alignment)
 
         if distance > tolerance:
             if alignment <= 0.5:
