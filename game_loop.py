@@ -3,7 +3,7 @@ import entities
 import game_engine
 
 class Game:
-    def __init__(self, screen_width=1600, screen_height=900, world_width=8000, world_height=8000):  # Added world size definitions
+    def __init__(self, screen_width=1600, screen_height=900, world_width=8000, world_height=8000):
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -28,8 +28,9 @@ class Game:
         self.hud = None
 
     def start_game(self, ship_class):
+        number_of_enemies = 1
         self.player, self.enemies = self.game_master.setup_game(
-            self.all_ships, self.projectiles, (self.world_width // 2, self.world_height // 2), 5, self.difficulty, ship_class
+            self.all_ships, self.projectiles, (self.world_width // 2, self.world_height // 2), number_of_enemies, self.difficulty, ship_class
         )
         self.camera = game_engine.Camera.create_for_gameloop(self.screen_width, self.screen_height, self.player)
         self.hud = game_engine.HUD.create_for_gameloop(self.camera)
@@ -156,14 +157,16 @@ class Game:
         self.hud.draw (self.screen, self.player, self.enemies)
 
         for enemy in self.enemies[:]:
+            combat_range = 500
+            optimal_alignment = 0.2
             if not enemy.alive():
                 self.enemies.remove(enemy)
                 continue
             distance, alignment = enemy.approach_target(self.player.x, self.player.y)
-            # if distance < 500 and alignment <= 0.2:
-            #     projs = enemy.fire()
-            #     for proj in projs:
-            #         self.projectiles.add(proj)
+            if distance < combat_range and alignment <= optimal_alignment:
+                projs = enemy.fire()
+                for proj in projs:
+                    self.projectiles.add(proj)
 
 
 if __name__ == '__main__':
